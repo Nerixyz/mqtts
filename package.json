@@ -1,0 +1,42 @@
+{
+  "name": "mqtts",
+  "version": "0.1.0",
+  "description": "MQTT client in Typescript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "lint": "eslint --fix --ext .js,.ts src/**",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "precommit": "npm run typecheck && npm run lint && npm run format"
+  },
+  "dependencies": {
+    "debug": "^4.1.1",
+    "lodash": "^4.17.15",
+    "rxjs": "^6.5.4",
+    "ts-xor": "^1.0.8",
+    "ts-custom-error": "^3.1.1",
+    "bluebird": "^3.7.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.19.1",
+    "@typescript-eslint/parser": "^2.19.1",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.7.5",
+    "@types/node": "^13.7.0",
+    "@types/lodash": "^4.14.149",
+    "@types/debug": "^4.1.5",
+    "jest": "^25.1.0",
+    "@types/jest": "^25.1.2",
+    "@types/bluebird": "^3.5.29"
+  },
+  "keywords": ["MQTT", "subscribe", "iot", "tls"],
+  "author": "nerixyz",
+  "license": "MIT"
+}
