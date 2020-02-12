@@ -62,7 +62,7 @@ export class MqttParser {
         resolve: null,
         wait() {
             if (this.locked) {
-                return new Promise<void>((resolve) => {
+                return new Promise<void>(resolve => {
                     this.resolve = resolve;
                 });
             } else {

@@ -139,7 +139,7 @@ export class MqttClient {
         if (noNewPromise) {
             promise = this.startFlow(this.getConnectFlow(options));
         } else {
-            promise = new Promise<void>((resolve) => {
+            promise = new Promise<void>(resolve => {
                 this.state.startResolve = resolve;
             });
             this.startFlow(this.getConnectFlow(options)).then(() => this.state.startResolve?.());
@@ -171,16 +171,16 @@ export class MqttClient {
     }
 
     public listen<T>(listener: ListenOptions<T>): Observable<T> {
-        if(listener.subscribe) {
+        if (listener.subscribe) {
             this.subscribe({
                 ...listener.subscriptionInfo,
-                topic: listener.topic
+                topic: listener.topic,
             }).catch(e => this.$warning.next(e));
         }
         // @ts-ignore
         return this.$message
             .pipe(
-                filter((v) => {
+                filter(v => {
                     if (v.topic !== listener.topic) return false;
                     if (typeof listener.validator === null) return true;
                     if (!listener.validator) {

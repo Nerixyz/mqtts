@@ -1,5 +1,5 @@
 import { PacketFlow } from './packet-flow';
-import { MqttMessage, MqttMessageOutgoing } from '../mqtt.message';
+import { MqttMessageOutgoing } from '../mqtt.message';
 import { MqttPacket } from '../mqtt.packet';
 import { IdentifiableBasePacket } from '../packets';
 import { PublishRequestPacket } from '../packets';
