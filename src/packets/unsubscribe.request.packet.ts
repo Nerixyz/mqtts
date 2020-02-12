@@ -42,8 +42,4 @@ export class UnsubscribeRequestPacket extends IdentifiableBasePacket {
         super.write(stream);
         stream.write(data.data);
     }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
-    }
 }

@@ -8,7 +8,7 @@ export class PublishReleasePacket extends IdentifierPacket {
         this.identifier = identifier ?? IdentifierPacket.generateIdentifier();
     }
 
-    protected getExpectedPacketFlags(): number {
+    protected get expectedPacketFlags(): number {
         return 2;
     }
 }

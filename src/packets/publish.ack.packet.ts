@@ -5,7 +5,4 @@ export class PublishAckPacket extends IdentifierPacket {
     public constructor() {
         super(PacketTypes.TYPE_PUBACK);
     }
-    protected getExpectedPacketFlags(): number {
-        return 0;
-    }
 }

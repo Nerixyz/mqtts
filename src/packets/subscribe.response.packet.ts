@@ -64,8 +64,4 @@ export class SubscribeResponsePacket extends IdentifiableBasePacket {
             throw new Error(`Invalid return code: ${returnCode}`);
         }
     }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
-    }
 }

@@ -5,8 +5,4 @@ export class PublishCompletePacket extends IdentifierPacket {
     public constructor() {
         super(PacketTypes.TYPE_PUBCOMP);
     }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
-    }
 }

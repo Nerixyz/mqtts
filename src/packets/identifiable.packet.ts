@@ -11,7 +11,9 @@ export abstract class IdentifiableBasePacket extends MqttPacket {
     private static nextId = 0;
     private _identifier: number;
 
-    protected abstract getExpectedPacketFlags(): number;
+    protected get expectedPacketFlags(): number {
+        return 0;
+    }
 
     protected generateIdentifier() {
         if (typeof this._identifier === 'undefined') {
@@ -34,8 +36,8 @@ export abstract class IdentifierPacket extends IdentifiableBasePacket {
 
     public read(stream: PacketStream): void {
         super.read(stream);
-        if (this.getExpectedPacketFlags() !== 0) {
-            this.assertPacketFlags(this.getExpectedPacketFlags());
+        if (this.expectedPacketFlags !== 0) {
+            this.assertPacketFlags(this.expectedPacketFlags);
         }
         this.assertRemainingPacketLength();
 

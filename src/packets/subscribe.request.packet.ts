@@ -20,6 +20,10 @@ export class SubscribeRequestPacket extends IdentifiableBasePacket {
         this._topic = value;
     }
 
+    protected get expectedPacketFlags(): number {
+        return 2;
+    }
+
     private _topic: string;
     private _qosLevel: number;
 
@@ -29,7 +33,7 @@ export class SubscribeRequestPacket extends IdentifiableBasePacket {
         this.assertValidString(topic ?? '');
         this._topic = topic ?? '';
         this._qosLevel = qosLevel;
-        this.packetFlags = 0x2;
+        this.packetFlags = 2;
     }
 
     public read(stream: PacketStream): void {
@@ -53,9 +57,5 @@ export class SubscribeRequestPacket extends IdentifiableBasePacket {
         this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);
-    }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
     }
 }

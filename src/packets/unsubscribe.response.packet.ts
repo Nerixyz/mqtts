@@ -5,8 +5,4 @@ export class UnsubscribeResponsePacket extends IdentifierPacket {
     public constructor() {
         super(PacketTypes.TYPE_UNSUBACK);
     }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
-    }
 }

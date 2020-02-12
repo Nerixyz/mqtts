@@ -40,7 +40,7 @@ export class ConnectRequestPacket extends MqttPacket {
         const { protocolLevel, protocolName, flags, clientId, keepAlive, will, username, password } = this.options;
         const data = PacketStream.empty()
             .writeString(protocolName ?? 'MQTT')
-            .writeByte(protocolLevel ?? 3)
+            .writeByte(protocolLevel ?? 4)
             .writeByte(flags ?? ConnectRequestPacket.makeFlags(this.options))
             .writeWord(keepAlive ?? 60)
             .writeString(clientId ?? 'mqtt_' + random(0, 200000));

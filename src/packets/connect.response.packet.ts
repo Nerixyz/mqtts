@@ -48,10 +48,7 @@ export class ConnectResponsePacket extends MqttPacket {
         this._flags = stream.readByte();
         this._returnCode = stream.readByte();
         /**
-         * It should be noted that the MQTT 3(.11) standard does not specify a payload to be sent wit a CONNACK packet,
-         * but facebook being facebook added a payload to this response instead of publishing on a topic.
-         * So, I added this payload to the normal CONNACK to avoid duplicate code.
-         * But if anyone ever tries to implement this, the payload isn't part of regular MQTT traffic.
+         *  NOT IN MQTT 3.1.1!
          */
         if (this.remainingPacketLength - 2 > 0) {
             this._payload = stream.readStringAsBuffer();

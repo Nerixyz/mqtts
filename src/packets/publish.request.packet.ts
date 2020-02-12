@@ -60,7 +60,6 @@ export class PublishRequestPacket extends IdentifiableBasePacket {
 
     public read(stream: PacketStream): void {
         super.read(stream);
-        //this.assertRemainingPacketLength();
         const lastPos = stream.position;
         this._topic = stream.readString();
         this.identifier = NaN;
@@ -85,9 +84,5 @@ export class PublishRequestPacket extends IdentifiableBasePacket {
         this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);
-    }
-
-    protected getExpectedPacketFlags(): number {
-        return 0;
     }
 }
