@@ -27,12 +27,13 @@
     "precommit": "npm run typecheck && npm run lint && npm run format"
   },
   "dependencies": {
+    "bluebird": "^3.7.2",
     "debug": "^4.1.1",
     "lodash": "^4.17.15",
     "rxjs": "^6.5.4",
-    "ts-xor": "^1.0.8",
     "ts-custom-error": "^3.1.1",
-    "bluebird": "^3.7.2"
+    "ts-xor": "^1.0.8",
+    "ws": "^7.2.1"
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.29",
@@ -40,6 +41,7 @@
     "@types/jest": "^25.1.2",
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.7.0",
+    "@types/ws": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^2.19.1",
     "@typescript-eslint/parser": "^2.19.1",
     "eslint": "^6.8.0",

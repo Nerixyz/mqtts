@@ -119,21 +119,26 @@ export class MqttClient {
         }
         this.mqttDebug('Connecting...');
         this.state.connectOptions = defaults(options, this.state.connectOptions ?? {});
-        this.transport.callbacks = {
-            disconnect: (data?: Error) => {
-                if (data) {
-                    this.mqttDebug(`Transport disconnected with ${data}\n${data.stack}`);
-                    this.$error.next(data);
-                }
-                this.setDisconnected();
-            },
-            connect: () => this.$open.next(),
-            error: (e: Error) => this.$error.next(e),
-            data: (data: Buffer) => this.parseData(data),
-        };
         this.setConnecting();
-        this.transport.connect();
-        return this.registerClient(options);
+        return new Promise(resolve => {
+            this.transport.callbacks = {
+                disconnect: (data?: Error) => {
+                    if (data) {
+                        this.mqttDebug(`Transport disconnected with ${data}\n${data.stack}`);
+                        this.$error.next(data);
+                    }
+                    this.setDisconnected();
+                },
+                connect: () => {
+                    this.$open.next();
+                    resolve();
+                },
+                error: (e: Error) => this.$error.next(e),
+                data: (data: Buffer) => this.parseData(data),
+            };
+
+            this.transport.connect();
+        }).then(() => this.registerClient(options));
     }
 
     protected registerClient(options: RegisterClientOptions, noNewPromise = false): Promise<any> {
