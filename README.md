@@ -9,6 +9,8 @@ These are the key features:
 -   Focus On Extensibility (using easy to extend `classes`)
 -   Written in Typescript
 -   **RxJS** Observables and Subjects
+-   Parameterized listeners: `devices/:name/color` will also give you any object with the properties:
+    `{name: '...'}`
 
 # Example
 
@@ -21,9 +23,11 @@ const client = new MqttClient({
 // connect
 await client.connect();
 // subscribe and listen to the topic
-client.listen({ topic: 'mqtts/test/publish', subscribe: true }).subscribe(message => {
-    console.log(message);
-});
+client
+    .listen({ topic: 'mqtts/test/:command', subscribe: true })
+    .subscribe(({ payload, params }) => {
+        console.log(payload.toString('utf8'), params);
+    });
 // publish to the topic
 await client.publish({ topic: 'mqtts/test/publish', payload: 'hi :)' });
 ```
