@@ -2,7 +2,8 @@ import { Observable, Subject } from 'rxjs';
 import {
     ExecuteDelayed,
     ExecuteNextTick,
-    ExecutePeriodically, IncomingListenMessage,
+    ExecutePeriodically,
+    IncomingListenMessage,
     ListenOptions,
     MqttClientConstructorOptions,
     MqttSubscription,
@@ -174,7 +175,7 @@ export class MqttClient {
     public listen<T>(listener: ListenOptions<T>): Observable<T> {
         const paramRegex = /\/:[A-Za-z-_0-9]+/g;
         let baseTopic = listener.topic;
-        if(listener.topic.match(paramRegex)) {
+        if (listener.topic.match(paramRegex)) {
             baseTopic = listener.topic.replace(paramRegex, '/+');
         }
         if (listener.subscribe) {
@@ -186,7 +187,7 @@ export class MqttClient {
         // @ts-ignore
         return this.$message
             .pipe(
-                filter((v) => {
+                filter(v => {
                     if (!matchTopic(baseTopic, v.topic)) return false;
                     if (typeof listener.validator === null) return true;
                     if (!listener.validator) {
@@ -195,10 +196,14 @@ export class MqttClient {
                     return listener.validator(v);
                 }),
             )
-            .pipe(map((v: IncomingListenMessage<any>): IncomingListenMessage<any> => {
-                v.params = extractParams(listener.topic, v.topic);
-                return v;
-            }))
+            .pipe(
+                map(
+                    (v: IncomingListenMessage<any>): IncomingListenMessage<any> => {
+                        v.params = extractParams(listener.topic, v.topic);
+                        return v;
+                    },
+                ),
+            )
             .pipe(map(v => (listener.transformer ?? (x => x))(v)));
     }
 
@@ -336,8 +341,7 @@ export class MqttClient {
     }
 
     protected setDisconnected() {
-        if(!this.state.disconnected)
-            this.$disconnect.next();
+        if (!this.state.disconnected) this.$disconnect.next();
         this.state.connecting = false;
         this.state.connected = false;
         this.state.disconnected = true;

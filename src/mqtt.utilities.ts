@@ -21,12 +21,11 @@ export function topicListener<T>(options: {
 }
 
 export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
-    if(baseTopic.length === incomingTopic.length && baseTopic === incomingTopic)
-        return true;
+    if (baseTopic.length === incomingTopic.length && baseTopic === incomingTopic) return true;
     const parts = baseTopic.split('+');
     let remaining = incomingTopic;
-    for(const part of parts) {
-        if(!remaining.startsWith(part)) {
+    for (const part of parts) {
+        if (!remaining.startsWith(part)) {
             return false;
         }
         remaining = removeUntil(remaining.substring(part.length), '/');
@@ -42,8 +41,8 @@ export function extractParams(template: string, topic: string): object {
     const templateParts = template.split('/');
     const topicParts = topic.split('/');
     const params: any = {};
-    for(let i = 0; i < Math.min(templateParts.length, topicParts.length); i++) {
-        if(templateParts[i].startsWith(':')) {
+    for (let i = 0; i < Math.min(templateParts.length, topicParts.length); i++) {
+        if (templateParts[i].startsWith(':')) {
             params[templateParts[i].substring(1)] = topicParts[i];
         }
     }
