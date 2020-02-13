@@ -1,6 +1,6 @@
 {
   "name": "mqtts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MQTT client in Typescript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
