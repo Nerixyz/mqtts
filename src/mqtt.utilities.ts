@@ -19,3 +19,33 @@ export function topicListener<T>(options: {
         onData: options.onData,
     };
 }
+
+export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
+    if(baseTopic.length === incomingTopic.length && baseTopic === incomingTopic)
+        return true;
+    const parts = baseTopic.split('+');
+    let remaining = incomingTopic;
+    for(const part of parts) {
+        if(!remaining.startsWith(part)) {
+            return false;
+        }
+        remaining = removeUntil(remaining.substring(part.length), '/');
+    }
+    return true;
+}
+
+export function removeUntil(input: string, char: string): string {
+    return input.substring(Math.max(input.indexOf(char), 0));
+}
+
+export function extractParams(template: string, topic: string): object {
+    const templateParts = template.split('/');
+    const topicParts = topic.split('/');
+    const params: any = {};
+    for(let i = 0; i < Math.min(templateParts.length, topicParts.length); i++) {
+        if(templateParts[i].startsWith(':')) {
+            params[templateParts[i].substring(1)] = topicParts[i];
+        }
+    }
+    return params;
+}

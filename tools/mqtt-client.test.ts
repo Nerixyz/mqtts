@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { MqttClient } from '../src';
+import { IncomingListenMessage, MqttClient, MqttMessage } from '../src';
 import { TcpTransport } from '../src/transport';
 
 const mqttClient = new MqttClient({
@@ -12,8 +12,8 @@ mqttClient.$disconnect.subscribe(r => console.error('disconnected', r));
 
 (async () => {
     await mqttClient.connect();
-    mqttClient.listen({topic: 'mqtts/test/publish', subscribe: true}).subscribe((message) => {
-        console.log(message);
+    mqttClient.listen<IncomingListenMessage<any>>({topic: 'mqtts/:type/publish', subscribe: true}).subscribe(({payload, params}) => {
+        console.log(payload.toString(), params);
     });
     await mqttClient.publish({topic: 'mqtts/test/publish', payload: 'hi :)'})
 })();

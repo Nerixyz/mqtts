@@ -19,7 +19,6 @@
     "dist"
   ],
   "include": [
-    "src/**/*.ts",
-    "test/**/*.ts"
+    "**/*.ts"
   ]
 }

@@ -2,7 +2,7 @@ import { Observable, Subject } from 'rxjs';
 import {
     ExecuteDelayed,
     ExecuteNextTick,
-    ExecutePeriodically,
+    ExecutePeriodically, IncomingListenMessage,
     ListenOptions,
     MqttClientConstructorOptions,
     MqttSubscription,
@@ -29,6 +29,7 @@ import { ConnectRequestOptions, ConnectResponsePacket, PublishRequestPacket } fr
 import { MqttMessage, MqttMessageOutgoing } from './mqtt.message';
 import { filter, map } from 'rxjs/operators';
 import debug = require('debug');
+import { extractParams, matchTopic } from './mqtt.utilities';
 
 export class MqttClient {
     private mqttDebug = debug('mqtt:client');
@@ -171,17 +172,22 @@ export class MqttClient {
     }
 
     public listen<T>(listener: ListenOptions<T>): Observable<T> {
+        const paramRegex = /\/:[A-Za-z-_0-9]+/g;
+        let baseTopic = listener.topic;
+        if(listener.topic.match(paramRegex)) {
+            baseTopic = listener.topic.replace(paramRegex, '/+');
+        }
         if (listener.subscribe) {
             this.subscribe({
                 ...listener.subscriptionInfo,
-                topic: listener.topic,
+                topic: baseTopic,
             }).catch(e => this.$warning.next(e));
         }
         // @ts-ignore
         return this.$message
             .pipe(
-                filter(v => {
-                    if (v.topic !== listener.topic) return false;
+                filter((v) => {
+                    if (!matchTopic(baseTopic, v.topic)) return false;
                     if (typeof listener.validator === null) return true;
                     if (!listener.validator) {
                         return v.payload && v.payload.length > 0;
@@ -189,6 +195,10 @@ export class MqttClient {
                     return listener.validator(v);
                 }),
             )
+            .pipe(map((v: IncomingListenMessage<any>): IncomingListenMessage<any> => {
+                v.params = extractParams(listener.topic, v.topic);
+                return v;
+            }))
             .pipe(map(v => (listener.transformer ?? (x => x))(v)));
     }
 
@@ -326,7 +336,8 @@ export class MqttClient {
     }
 
     protected setDisconnected() {
-        this.$disconnect.next();
+        if(!this.state.disconnected)
+            this.$disconnect.next();
         this.state.connecting = false;
         this.state.connected = false;
         this.state.disconnected = true;
