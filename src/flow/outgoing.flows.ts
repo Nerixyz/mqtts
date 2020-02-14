@@ -3,7 +3,6 @@ import {
     ConnectRequestPacket,
     ConnectResponsePacket,
     DisconnectRequestPacket,
-    IdentifiableBasePacket,
     PingRequestPacket,
     PublishAckPacket,
     PublishCompletePacket,
@@ -20,6 +19,7 @@ import { PacketTypes } from '../mqtt.constants';
 import { MqttMessageOutgoing } from '../mqtt.message';
 import { MqttSubscription } from '../mqtt.types';
 import { PacketFlowFunc } from './packet-flow';
+import { MqttPacket } from '../mqtt.packet';
 
 export function outgoingConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ConnectRequestOptions> {
     options = defaults(options, {
@@ -55,7 +55,7 @@ export function outgoingPublishFlow(
     message: MqttMessageOutgoing,
     identifier?: number,
 ): PacketFlowFunc<MqttMessageOutgoing> {
-    const id = identifier ?? IdentifiableBasePacket.generateIdentifier();
+    const id = identifier ?? MqttPacket.generateIdentifier();
     let receivedPubRec = false;
     return success => ({
         start: () => {
@@ -98,7 +98,7 @@ export function outgoingSubscribeFlow(
     subscription: MqttSubscription,
     identifier?: number,
 ): PacketFlowFunc<MqttSubscription> {
-    const id = identifier ?? IdentifiableBasePacket.generateIdentifier();
+    const id = identifier ?? MqttPacket.generateIdentifier();
     return (success, error) => ({
         start: () => {
             const packet = new SubscribeRequestPacket(subscription.topic, subscription.qosLevel || 0);
@@ -118,7 +118,7 @@ export function outgoingSubscribeFlow(
 }
 
 export function outgoingUnsubscribeFlow(subscription: MqttSubscription, identifier?: number): PacketFlowFunc<void> {
-    const id = identifier ?? IdentifiableBasePacket.generateIdentifier();
+    const id = identifier ?? MqttPacket.generateIdentifier();
     return success => ({
         start: () => {
             const packet = new UnsubscribeRequestPacket(subscription.topic);

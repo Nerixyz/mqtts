@@ -1,10 +1,4 @@
-import {
-    PingResponsePacket,
-    PublishAckPacket,
-    PublishCompletePacket,
-    PublishReceivedPacket,
-    PublishReleasePacket,
-} from '../packets';
+import { PingResponsePacket, PublishAckPacket, PublishCompletePacket, PublishReceivedPacket } from '../packets';
 import { MqttMessage } from '../mqtt.message';
 import { PacketTypes } from '../mqtt.constants';
 import { PacketFlowFunc } from './packet-flow';
@@ -34,7 +28,8 @@ export function incomingPublishFlow(message: MqttMessage, identifier = -1): Pack
             return packet;
         },
         accept: packet =>
-            packet.packetType === PacketTypes.TYPE_PUBREL && (packet as PublishReleasePacket).identifier === identifier,
+            packet.packetType === PacketTypes.TYPE_PUBREL &&
+            (packet as { identifier: number }).identifier === identifier,
         next: () => {
             success(message);
             const response = new PublishCompletePacket();

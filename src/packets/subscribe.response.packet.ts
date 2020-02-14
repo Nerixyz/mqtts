@@ -1,15 +1,19 @@
-import { IdentifiableBasePacket } from './identifiable.packet';
 import { PacketTypes } from '../mqtt.constants';
 import { PacketStream } from '../packet-stream';
+import { MqttPacket } from '../mqtt.packet';
+import { InvalidDirectionError } from '../errors';
 
-export class SubscribeResponsePacket extends IdentifiableBasePacket {
+export class SubscribeResponsePacket extends MqttPacket {
     public get returnCodes(): number[] {
         return this._returnCodes;
     }
-
     public set returnCodes(value: number[]) {
         value.forEach(e => this.assertValidReturnCode(e));
         this._returnCodes = value;
+    }
+
+    get hasIdentifier(): boolean {
+        return true;
     }
 
     private static readonly qosLevels = {
@@ -27,10 +31,6 @@ export class SubscribeResponsePacket extends IdentifiableBasePacket {
 
     public read(stream: PacketStream): void {
         super.read(stream);
-        this.assertPacketFlags(0);
-        this.assertRemainingPacketLength();
-
-        this.identifier = stream.readWord();
 
         const returnCodeLen = this.remainingPacketLength - 2;
         this._returnCodes = [];
@@ -41,13 +41,8 @@ export class SubscribeResponsePacket extends IdentifiableBasePacket {
         }
     }
 
-    public write(stream: PacketStream): void {
-        const data = PacketStream.empty().writeWord(this.generateIdentifier());
-        this._returnCodes.forEach(c => data.writeByte(c));
-
-        this.remainingPacketLength = data.length;
-        super.write(stream);
-        stream.write(data.data);
+    public write(): void {
+        throw new InvalidDirectionError('write');
     }
 
     public isError(returnCode: number) {

@@ -5,6 +5,7 @@ import {
     ExecutePeriodically,
     IncomingListenMessage,
     ListenOptions,
+    ListenSubscribeOptions,
     MqttClientConstructorOptions,
     MqttSubscription,
     RegisterClientOptions,
@@ -32,6 +33,7 @@ import { MqttMessage, MqttMessageOutgoing } from './mqtt.message';
 import { filter, map } from 'rxjs/operators';
 import debug = require('debug');
 import { extractParams, matchTopic } from './mqtt.utilities';
+import { UnexpectedPacketError } from './errors';
 
 export class MqttClient {
     private mqttDebug = debug('mqtt:client');
@@ -176,17 +178,18 @@ export class MqttClient {
         return this.startFlow(outgoingDisconnectFlow());
     }
 
+    public listenSubscribe<T>(listener: ListenSubscribeOptions<T>): Promise<Observable<T>> {
+        return this.subscribe({
+            ...listener.subscriptionInfo,
+            topic: listener.topic.replace(/\/:[A-Za-z-_0-9]+/g, '/+'),
+        }).then(() => this.listen(listener));
+    }
+
     public listen<T>(listener: ListenOptions<T>): Observable<T> {
         const paramRegex = /\/:[A-Za-z-_0-9]+/g;
         let baseTopic = listener.topic;
         if (listener.topic.match(paramRegex)) {
             baseTopic = listener.topic.replace(paramRegex, '/+');
-        }
-        if (listener.subscribe) {
-            this.subscribe({
-                ...listener.subscriptionInfo,
-                topic: baseTopic,
-            }).catch(e => this.$warning.next(e));
         }
         // @ts-ignore
         return this.$message
@@ -304,7 +307,7 @@ export class MqttClient {
                             retained: pub.retained,
                             duplicate: pub.duplicate,
                         },
-                        pub.identifier,
+                        pub.identifier ?? undefined,
                     ),
                 )
                     .then(m => this.$message.next(m))
@@ -328,7 +331,7 @@ export class MqttClient {
             case PacketTypes.TYPE_PUBREC:
             case PacketTypes.TYPE_PUBCOMP: {
                 if (!this.continueFlows(packet)) {
-                    this.$warning.next(new Error(`Unexpected packet: ${Object.keys(PacketTypes)[packet.packetType]}`));
+                    this.$warning.next(new UnexpectedPacketError(packet.constructor.name));
                 }
                 break;
             }

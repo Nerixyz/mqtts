@@ -1,6 +1,7 @@
 import { MqttPacket } from '../mqtt.packet';
 import { PacketStream } from '../packet-stream';
 import { PacketTypes } from '../mqtt.constants';
+import { InvalidDirectionError } from '../errors';
 
 export class ConnectResponsePacket extends MqttPacket {
     public get payload(): Buffer {
@@ -53,5 +54,9 @@ export class ConnectResponsePacket extends MqttPacket {
         if (this.remainingPacketLength - 2 > 0) {
             this._payload = stream.readStringAsBuffer();
         }
+    }
+
+    write(): void {
+        throw new InvalidDirectionError('write');
     }
 }

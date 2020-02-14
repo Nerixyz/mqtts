@@ -1,7 +1,6 @@
 export * from './connect.request.packet';
 export * from './connect.response.packet';
 export * from './disconnect.request.packet';
-export * from './identifiable.packet';
 export * from './ping.request.packet';
 export * from './ping.response.packet';
 export * from './publish.ack.packet';

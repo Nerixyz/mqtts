@@ -1,8 +1,13 @@
-import { IdentifiableBasePacket } from './identifiable.packet';
 import { PacketTypes } from '../mqtt.constants';
 import { PacketStream } from '../packet-stream';
+import { MqttPacket } from '../mqtt.packet';
+import { InvalidDirectionError } from '../errors';
 
-export class SubscribeRequestPacket extends IdentifiableBasePacket {
+export class SubscribeRequestPacket extends MqttPacket {
+    get hasIdentifier(): boolean {
+        return true;
+    }
+
     public get qosLevel(): number {
         return this._qosLevel;
     }
@@ -20,10 +25,6 @@ export class SubscribeRequestPacket extends IdentifiableBasePacket {
         this._topic = value;
     }
 
-    protected get expectedPacketFlags(): number {
-        return 2;
-    }
-
     private _topic: string;
     private _qosLevel: number;
 
@@ -36,22 +37,12 @@ export class SubscribeRequestPacket extends IdentifiableBasePacket {
         this.packetFlags = 2;
     }
 
-    public read(stream: PacketStream): void {
-        super.read(stream);
-        this.assertPacketFlags(2);
-        this.assertRemainingPacketLength();
-
-        this.identifier = stream.readWord();
-        this._topic = stream.readString();
-        this._qosLevel = stream.readByte();
-
-        this.assertValidQosLevel(this._qosLevel);
-        this.assertValidString(this._topic);
+    public read(): void {
+        throw new InvalidDirectionError('read');
     }
 
     public write(stream: PacketStream): void {
         const data = PacketStream.empty()
-            .writeWord(this.generateIdentifier())
             .writeString(this._topic)
             .writeByte(this._qosLevel);
         this.remainingPacketLength = data.length;

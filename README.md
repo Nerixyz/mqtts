@@ -23,11 +23,13 @@ const client = new MqttClient({
 // connect
 await client.connect();
 // subscribe and listen to the topic
-client
-    .listen({ topic: 'mqtts/test/:command', subscribe: true })
-    .subscribe(({ payload, params }) => {
-        console.log(payload.toString('utf8'), params);
-    });
+(
+    await client.listenSubscribe({
+        topic: 'mqtts/test/:command' 
+    })
+).subscribe(({ payload, params }) => {
+    console.log(payload.toString('utf8'), params);
+});
 // publish to the topic
 await client.publish({ topic: 'mqtts/test/publish', payload: 'hi :)' });
 ```

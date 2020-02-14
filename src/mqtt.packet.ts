@@ -1,12 +1,45 @@
 import { PacketStream } from './packet-stream';
+import { nullOrUndefined } from './mqtt.utilities';
 
 export abstract class MqttPacket {
     public get packetType(): number {
         return this._packetType;
     }
+    public set identifier(value: number | null) {
+        if (this.hasIdentifier) {
+            this._identifier = Math.max(Math.min(value ?? 0, 0xffff), 0);
+        }
+    }
+    public get identifier(): number | null {
+        return this.hasIdentifier ? this._identifier : null;
+    }
+
+    protected get hasIdentifier(): boolean {
+        return false;
+    }
+    protected get inlineIdentifier(): boolean {
+        return false;
+    }
+
     private readonly _packetType: number;
     protected packetFlags = 0;
     protected remainingPacketLength = 0;
+    private _identifier: number;
+
+    private static nextId = 0;
+
+    protected generateIdentifier() {
+        if (nullOrUndefined(this._identifier)) {
+            this._identifier = MqttPacket.generateIdentifier();
+        }
+        return this._identifier;
+    }
+
+    public static generateIdentifier(): number {
+        MqttPacket.nextId++;
+        MqttPacket.nextId &= 0xffff;
+        return MqttPacket.nextId;
+    }
 
     protected constructor(packetType: number) {
         this._packetType = packetType;
@@ -22,11 +55,26 @@ export abstract class MqttPacket {
 
         this.packetFlags = flags;
         this.readRemainingLength(stream);
+        if (this.hasIdentifier && !this.inlineIdentifier) {
+            this.readIdentifier(stream);
+        }
+    }
+
+    protected readIdentifier(stream: PacketStream): PacketStream {
+        if (this.hasIdentifier) this._identifier = stream.readWord();
+        return stream;
     }
 
     public write(stream: PacketStream): void {
         stream.writeByte(((this._packetType & 0x0f) << 4) | (this.packetFlags & 0x0f));
+        if (this.hasIdentifier && !this.inlineIdentifier) this.remainingPacketLength += 2;
         this.writeRemainingLength(stream);
+        if (this.hasIdentifier && !this.inlineIdentifier) this.writeIdentifier(stream);
+    }
+
+    protected writeIdentifier(stream: PacketStream): PacketStream {
+        if (this.hasIdentifier) stream.writeWord(this._identifier);
+        return stream;
     }
 
     private readRemainingLength(stream: PacketStream): void {
@@ -47,16 +95,6 @@ export abstract class MqttPacket {
     }
 
     private writeRemainingLength(stream: PacketStream): void {
-        /*let x = this.remainingPacketLength;
-        do {
-            let encodedByte = x % 0x80;
-            x = Math.floor(x / 0x80);
-            if(x > 0){
-                encodedByte |= 0x80;
-            }
-            stream.writeByte(encodedByte);
-        }while (x > 0);*/
-
         let num = this.remainingPacketLength;
         let digit = 0;
         do {
@@ -66,23 +104,6 @@ export abstract class MqttPacket {
 
             stream.writeByte(digit);
         } while (num > 0);
-    }
-
-    protected assertPacketFlags(flags: number): void {
-        if (this.packetFlags !== flags) {
-            throw new Error(`Expected flags ${flags} but got ${this.packetFlags}`);
-        }
-    }
-
-    protected assertRemainingPacketLength(expected?: number): void {
-        if (typeof expected === 'number' && this.remainingPacketLength !== expected) {
-            throw new Error(
-                `Expected remaining packet length of ${expected} bytes but got ${this.remainingPacketLength}`,
-            );
-        }
-        if (!expected && this.remainingPacketLength <= 0) {
-            throw new Error('Expected payload but remaining packet length is 0.');
-        }
     }
 
     protected assertValidStringLength(str: string): void {

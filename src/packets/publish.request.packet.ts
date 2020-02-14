@@ -1,9 +1,9 @@
-import { IdentifiableBasePacket } from './identifiable.packet';
 import { PacketTypes } from '../mqtt.constants';
 import { PacketStream } from '../packet-stream';
+import { MqttPacket } from '../mqtt.packet';
 import { EndOfStreamError } from '../errors';
 
-export class PublishRequestPacket extends IdentifiableBasePacket {
+export class PublishRequestPacket extends MqttPacket {
     public get payload(): Buffer {
         return this._payload;
     }
@@ -49,6 +49,14 @@ export class PublishRequestPacket extends IdentifiableBasePacket {
         this.packetFlags |= (val & 3) << 1;
     }
 
+    get hasIdentifier(): boolean {
+        return !!this.qosLevel;
+    }
+
+    protected get inlineIdentifier(): boolean {
+        return true;
+    }
+
     private _topic: string;
     private _payload: Buffer;
 
@@ -58,14 +66,11 @@ export class PublishRequestPacket extends IdentifiableBasePacket {
         this._payload = payload ? (payload instanceof Buffer ? payload : Buffer.from(payload)) : Buffer.from([]);
     }
 
-    public read(stream: PacketStream): void {
+    read(stream: PacketStream): void {
         super.read(stream);
         const lastPos = stream.position;
         this._topic = stream.readString();
-        this.identifier = NaN;
-        if (this.qosLevel) {
-            this.identifier = stream.readWord();
-        }
+        this.readIdentifier(stream);
 
         const payloadLength = this.remainingPacketLength - (stream.position - lastPos);
         if (payloadLength === 0) return;
@@ -75,12 +80,8 @@ export class PublishRequestPacket extends IdentifiableBasePacket {
     }
 
     public write(stream: PacketStream): void {
-        const data = PacketStream.empty().writeString(this._topic);
-        if (this.qosLevel) {
-            data.writeWord(this.generateIdentifier());
-        }
+        const data = this.writeIdentifier(PacketStream.empty().writeString(this._topic)).write(this._payload);
 
-        data.write(this._payload);
         this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);

@@ -4,7 +4,6 @@ import { PacketStream } from './packet-stream';
 import Bluebird = require('bluebird');
 import { EndOfStreamError } from './errors';
 import {
-    ConnectRequestPacket,
     ConnectResponsePacket,
     DisconnectRequestPacket,
     PingRequestPacket,
@@ -25,7 +24,6 @@ export class MqttParser {
     protected errorCallback: (e: Error) => void;
 
     public mapping: [number, () => MqttPacket][] = [
-        [PacketTypes.TYPE_CONNECT, () => new ConnectRequestPacket()],
         [PacketTypes.TYPE_CONNACK, () => new ConnectResponsePacket()],
         [PacketTypes.TYPE_PUBLISH, () => new PublishRequestPacket()],
         [PacketTypes.TYPE_PUBACK, () => new PublishAckPacket()],

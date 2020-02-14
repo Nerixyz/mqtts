@@ -34,7 +34,9 @@ export interface ListenOptions<TOut> {
     topic: string;
     validator?: null | ((data: MqttMessage) => boolean);
     transformer?: (data: IncomingListenMessage<any>) => TOut;
-    subscribe?: boolean;
+}
+
+export interface ListenSubscribeOptions<TOut> extends ListenOptions<TOut> {
     subscriptionInfo?: Partial<MqttSubscription>;
 }
 

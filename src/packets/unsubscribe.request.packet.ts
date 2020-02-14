@@ -1,8 +1,13 @@
-import { IdentifiableBasePacket } from './identifiable.packet';
 import { PacketTypes } from '../mqtt.constants';
 import { PacketStream } from '../packet-stream';
+import { MqttPacket } from '../mqtt.packet';
+import { InvalidDirectionError } from '../errors';
 
-export class UnsubscribeRequestPacket extends IdentifiableBasePacket {
+export class UnsubscribeRequestPacket extends MqttPacket {
+    get hasIdentifier(): boolean {
+        return true;
+    }
+
     public get topic(): string {
         return this._topic;
     }
@@ -21,23 +26,12 @@ export class UnsubscribeRequestPacket extends IdentifiableBasePacket {
         this._topic = topic ?? '';
     }
 
-    public read(stream: PacketStream): void {
-        super.read(stream);
-        this.assertPacketFlags(2);
-        this.assertRemainingPacketLength();
-
-        const originalPosition = stream.position;
-
-        do {
-            this.identifier = stream.readWord();
-            this._topic = stream.readString();
-        } while (stream.position - originalPosition <= this.remainingPacketLength);
+    public read(): void {
+        throw new InvalidDirectionError('read');
     }
 
     public write(stream: PacketStream): void {
-        const data = PacketStream.empty()
-            .writeWord(this.generateIdentifier())
-            .writeString(this._topic);
+        const data = PacketStream.empty().writeString(this._topic);
         this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);

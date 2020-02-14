@@ -53,3 +53,5 @@ export interface Resolvers<T> {
     resolve: (value: T) => void;
     reject: (error: Error) => void;
 }
+
+export const nullOrUndefined = (input: any) => input == undefined;
