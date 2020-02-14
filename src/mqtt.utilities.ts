@@ -48,3 +48,8 @@ export function extractParams(template: string, topic: string): object {
     }
     return params;
 }
+
+export interface Resolvers<T> {
+    resolve: (value: T) => void;
+    reject: (error: Error) => void;
+}

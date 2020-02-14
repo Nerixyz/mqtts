@@ -8,9 +8,7 @@ export class WebsocketTransport extends Transport<{ url: string }> {
         this.socket = new WebSocket(this.options.url);
         this.socket.on('open', () => this.callbacks.connect());
         this.socket.on('message', (data: Buffer) => this.callbacks.data(data));
-        this.socket.on('close', (code: number, reason: string) =>
-            this.callbacks.disconnect(new Error(`${code}: ${reason}`)),
-        );
+        this.socket.on('close', () => this.callbacks.disconnect());
         this.socket.on('error', (e: Error) => this.callbacks.error(e));
     }
 

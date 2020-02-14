@@ -11,14 +11,15 @@ import {
     StopExecuting,
 } from './mqtt.types';
 import {
-    IncomingPublishFlow,
-    OutgoingConnectFlow,
-    OutgoingDisconnectFlow,
-    OutgoingPingFlow,
-    OutgoingPublishFlow,
-    OutgoingSubscribeFlow,
-    OutgoingUnsubscribeFlow,
-    PacketFlow,
+    incomingPublishFlow,
+    outgoingConnectFlow,
+    outgoingDisconnectFlow,
+    outgoingPingFlow,
+    outgoingPublishFlow,
+    outgoingSubscribeFlow,
+    outgoingUnsubscribeFlow,
+    PacketFlowData,
+    PacketFlowFunc,
 } from './flow';
 import { MqttParser } from './mqtt.parser';
 import { TlsTransport, Transport } from './transport';
@@ -26,7 +27,7 @@ import { MqttPacket } from './mqtt.packet';
 import { pull, defaults } from 'lodash';
 import { PacketStream } from './packet-stream';
 import { PacketTypes } from './mqtt.constants';
-import { ConnectRequestOptions, ConnectResponsePacket, PublishRequestPacket } from './packets';
+import { ConnectResponsePacket, PublishRequestPacket } from './packets';
 import { MqttMessage, MqttMessageOutgoing } from './mqtt.message';
 import { filter, map } from 'rxjs/operators';
 import debug = require('debug');
@@ -87,7 +88,7 @@ export class MqttClient {
     protected keepAliveTimer?: object;
 
     protected state: MqttClientState;
-    protected activeFlows: PacketFlow<any>[] = [];
+    protected activeFlows: PacketFlowData<any>[] = [];
 
     constructor(options: MqttClientConstructorOptions) {
         this.state = {
@@ -146,35 +147,33 @@ export class MqttClient {
         if (noNewPromise) {
             promise = this.startFlow(this.getConnectFlow(options));
         } else {
-            promise = new Promise<void>(resolve => {
-                this.state.startResolve = resolve;
-            });
+            promise = new Promise<void>(resolve => (this.state.startResolve = resolve));
             this.startFlow(this.getConnectFlow(options)).then(() => this.state.startResolve?.());
         }
-        this.connectTimer = this.executeDelayed(2000, () => {
-            this.registerClient(options, true).then(() => this.state.startResolve?.());
-        });
+        this.connectTimer = this.executeDelayed(2000, () =>
+            this.registerClient(options, true).then(() => this.state.startResolve?.()),
+        );
         return promise;
     }
 
-    protected getConnectFlow(options: any): PacketFlow<any> {
-        return new OutgoingConnectFlow(options);
+    protected getConnectFlow(options: any): PacketFlowFunc<any> {
+        return outgoingConnectFlow(options);
     }
 
     public publish(message: MqttMessageOutgoing): Promise<MqttMessageOutgoing> {
-        return this.startFlow(new OutgoingPublishFlow(message));
+        return this.startFlow(outgoingPublishFlow(message));
     }
 
     public subscribe(subscription: MqttSubscription): Promise<MqttSubscription> {
-        return this.startFlow(new OutgoingSubscribeFlow(subscription));
+        return this.startFlow(outgoingSubscribeFlow(subscription));
     }
 
-    public unsubscribe(subscription: MqttSubscription): Promise<MqttSubscription> {
-        return this.startFlow(new OutgoingUnsubscribeFlow(subscription));
+    public unsubscribe(subscription: MqttSubscription): Promise<void> {
+        return this.startFlow(outgoingUnsubscribeFlow(subscription));
     }
 
-    public disconnect(): Promise<ConnectRequestOptions> {
-        return this.startFlow(new OutgoingDisconnectFlow(this.state.connectOptions ?? {}));
+    public disconnect(): Promise<void> {
+        return this.startFlow(outgoingDisconnectFlow());
     }
 
     public listen<T>(listener: ListenOptions<T>): Observable<T> {
@@ -212,14 +211,29 @@ export class MqttClient {
             .pipe(map(v => (listener.transformer ?? (x => x))(v)));
     }
 
-    protected startFlow<T>(flow: PacketFlow<T>): Promise<T> {
-        const first = flow.start();
-        if (first) this.sendPacket(first);
+    protected startFlow<T>(flow: PacketFlowFunc<T>): Promise<T> {
+        return new Promise<T>((resolve, reject) => {
+            const data: PacketFlowData<T> = {
+                resolvers: { resolve, reject },
+                finished: false,
+                callbacks: flow(
+                    value => {
+                        data.finished = true;
+                        resolve(value);
+                    },
+                    err => {
+                        data.finished = true;
+                        reject(err);
+                    },
+                ),
+            };
+            const first = data.callbacks.start();
+            if (first) this.sendPacket(first);
 
-        if (!flow.finished) {
-            this.activeFlows.push(flow);
-        }
-        return flow.promise;
+            if (!data.finished) {
+                this.activeFlows.push(data);
+            }
+        });
     }
 
     /**
@@ -230,8 +244,8 @@ export class MqttClient {
     protected continueFlows(packet: MqttPacket): boolean {
         let result = false;
         for (const flow of this.activeFlows) {
-            if (flow.accept(packet)) {
-                const next = flow.next(packet);
+            if (flow.callbacks.accept?.(packet)) {
+                const next = flow.callbacks.next?.(packet);
                 if (next) {
                     this.sendPacket(next);
                 }
@@ -254,7 +268,7 @@ export class MqttClient {
         this.mqttDebug(`Starting keep-alive-ping {delay: ${value}}`);
         this.keepAliveTimer = this.executePeriodically(value * 1000, () => {
             const pingDebug = this.mqttDebug.extend('ping');
-            this.startFlow(new OutgoingPingFlow())
+            this.startFlow(outgoingPingFlow())
                 .then(() => pingDebug(`PingPong @ ${Date.now()}`))
                 .catch(() => pingDebug('PingPong failed.'));
         });
@@ -282,7 +296,7 @@ export class MqttClient {
             case PacketTypes.TYPE_PUBLISH: {
                 const pub = packet as PublishRequestPacket;
                 this.startFlow(
-                    new IncomingPublishFlow(
+                    incomingPublishFlow(
                         {
                             topic: pub.topic,
                             payload: pub.payload,

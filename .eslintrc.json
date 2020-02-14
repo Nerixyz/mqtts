@@ -39,7 +39,7 @@
       }],
     "no-constant-condition": "off",
     "no-use-before-define": "off",
-    "arrow-parens": ["error", "as-needed", {"requireForBlockBody": true}],
+    "arrow-parens": ["error", "as-needed"],
     "no-console": "warn"
   }
 }
