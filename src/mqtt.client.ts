@@ -297,7 +297,16 @@ export class MqttClient {
 
     protected async handlePacket(packet: MqttPacket): Promise<void> {
         this.logPacket(packet, 'Received');
+        let forceCheckFlows = false;
         switch (packet.packetType) {
+            case PacketTypes.TYPE_CONNACK: {
+                this.setConnected();
+                this.$connect.next(packet as ConnectResponsePacket);
+                if (this.state?.connectOptions?.keepAlive) {
+                    this.updateKeepAlive(this.state.connectOptions.keepAlive);
+                }
+                break;
+            }
             case PacketTypes.TYPE_PUBLISH: {
                 const pub = packet as PublishRequestPacket;
                 this.startFlow(
@@ -314,28 +323,6 @@ export class MqttClient {
                 )
                     .then(m => this.$message.next(m))
                     .catch(e => this.$warning.next(e));
-                // no break - continue
-            }
-            /* eslint no-fallthrough: "off" */
-            case PacketTypes.TYPE_CONNACK: {
-                this.setConnected();
-                this.$connect.next(packet as ConnectResponsePacket);
-                if (this.state?.connectOptions?.keepAlive) {
-                    this.updateKeepAlive(this.state.connectOptions.keepAlive);
-                }
-                // no break - continue
-            }
-            /* eslint no-fallthrough: "off" */
-            case PacketTypes.TYPE_PINGRESP:
-            case PacketTypes.TYPE_SUBACK:
-            case PacketTypes.TYPE_UNSUBACK:
-            case PacketTypes.TYPE_PUBREL:
-            case PacketTypes.TYPE_PUBACK:
-            case PacketTypes.TYPE_PUBREC:
-            case PacketTypes.TYPE_PUBCOMP: {
-                if (!this.continueFlows(packet)) {
-                    this.$warning.next(new UnexpectedPacketError(packet.constructor.name));
-                }
                 break;
             }
             case PacketTypes.TYPE_DISCONNECT: {
@@ -343,11 +330,10 @@ export class MqttClient {
                 this.setDisconnected();
                 break;
             }
-            default: {
-                this.$warning.next(
-                    new Error(`Cannot handle packet of type ${Object.keys(PacketTypes)[packet.packetType]}`),
-                );
-            }
+            default: forceCheckFlows = true
+        }
+        if (!this.continueFlows(packet) && forceCheckFlows) {
+            this.$warning.next(new UnexpectedPacketError(packet.constructor.name));
         }
     }
 

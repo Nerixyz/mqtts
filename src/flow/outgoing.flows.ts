@@ -64,7 +64,7 @@ export function outgoingPublishFlow(
             packet.duplicate = message.duplicate || false;
             packet.retained = message.retained || false;
 
-            if (message.qosLevel === 0) success(message);
+            if (!message.qosLevel) success(message);
             else packet.identifier = id;
 
             return packet;
