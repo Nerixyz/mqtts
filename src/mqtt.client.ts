@@ -214,7 +214,7 @@ export class MqttClient {
             .pipe(map(v => (listener.transformer ?? (x => x))(v)));
     }
 
-    protected startFlow<T>(flow: PacketFlowFunc<T>): Promise<T> {
+    public startFlow<T>(flow: PacketFlowFunc<T>): Promise<T> {
         return new Promise<T>((resolve, reject) => {
             const data: PacketFlowData<T> = {
                 resolvers: { resolve, reject },
