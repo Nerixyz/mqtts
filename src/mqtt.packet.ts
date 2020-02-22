@@ -73,7 +73,7 @@ export abstract class MqttPacket {
     }
 
     protected writeIdentifier(stream: PacketStream): PacketStream {
-        if (this.hasIdentifier) stream.writeWord(this._identifier);
+        if (this.hasIdentifier) stream.writeWord(this._identifier ?? this.generateIdentifier());
         return stream;
     }
 

@@ -53,9 +53,9 @@ export function outgoingPingFlow(): PacketFlowFunc<void> {
 
 export function outgoingPublishFlow(
     message: MqttMessageOutgoing,
-    identifier?: number,
+    _identifier?: number,
 ): PacketFlowFunc<MqttMessageOutgoing> {
-    const id = identifier ?? MqttPacket.generateIdentifier();
+    const id = _identifier ?? MqttPacket.generateIdentifier();
     let receivedPubRec = false;
     return success => ({
         start: () => {
@@ -88,7 +88,7 @@ export function outgoingPublishFlow(
                 success(message);
             } else if (packetType === PacketTypes.TYPE_PUBREC) {
                 receivedPubRec = true;
-                return new PublishReleasePacket(identifier);
+                return new PublishReleasePacket(id);
             }
         },
     });

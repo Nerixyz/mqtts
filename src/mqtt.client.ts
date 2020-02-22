@@ -280,6 +280,7 @@ export class MqttClient {
     protected sendPacket(packet: MqttPacket) {
         const stream = PacketStream.empty();
         packet.write(stream);
+        this.logPacket(packet, 'Sent');
         this.transport.send(stream.data);
     }
 
@@ -295,6 +296,7 @@ export class MqttClient {
     }
 
     protected async handlePacket(packet: MqttPacket): Promise<void> {
+        this.logPacket(packet, 'Received');
         switch (packet.packetType) {
             case PacketTypes.TYPE_PUBLISH: {
                 const pub = packet as PublishRequestPacket;
@@ -346,6 +348,16 @@ export class MqttClient {
                 );
             }
         }
+    }
+
+    protected logPacket(packet: MqttPacket, action: string) {
+        if (packet.packetType !== PacketTypes.TYPE_PINGREQ && packet.packetType !== PacketTypes.TYPE_PINGRESP)
+            this.mqttDebug.extend('packet')(
+                `${action} ${packet.constructor.name}` +
+                    (packet.identifier ? ` id: ${packet.identifier}` : '') +
+                    // @ts-ignore - instanceof is too expensive
+                    (packet.topic ? ` topic: ${packet.topic}` : ''),
+            );
     }
 
     protected reset() {
