@@ -314,8 +314,9 @@ export class MqttClient {
                 )
                     .then(m => this.$message.next(m))
                     .catch(e => this.$warning.next(e));
-                break;
+                // no break - continue
             }
+            /* eslint no-fallthrough: "off" */
             case PacketTypes.TYPE_CONNACK: {
                 this.setConnected();
                 this.$connect.next(packet as ConnectResponsePacket);
