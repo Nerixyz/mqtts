@@ -75,6 +75,12 @@ export class MqttParser {
         this.errorCallback = errorCallback ?? (() => {});
     }
 
+    public reset() {
+        this.stream = PacketStream.empty();
+        this.lock.locked = false;
+        this.lock.resolve = null;
+    }
+
     public async parse(data: Buffer): Promise<MqttPacket[]> {
         await this.lock.wait();
         this.lock.lock();

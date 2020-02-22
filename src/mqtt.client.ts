@@ -86,7 +86,7 @@ export class MqttClient {
     protected transport: Transport<unknown>;
     protected parser: MqttParser;
 
-    protected connectTimer: object;
+    protected connectTimer?: object;
     protected keepAliveTimer?: object;
 
     protected state: MqttClientState;
@@ -348,6 +348,14 @@ export class MqttClient {
         }
     }
 
+    protected reset() {
+        this.connectTimer = undefined;
+        this.keepAliveTimer = undefined;
+        this.activeFlows = [];
+        this.state.startResolve = undefined;
+        this.parser.reset();
+    }
+
     protected setConnecting() {
         this.state.connecting = true;
         this.state.connected = false;
@@ -368,6 +376,7 @@ export class MqttClient {
         this.state.connected = false;
         this.state.disconnected = true;
         this.stopExecuting(this.keepAliveTimer);
+        this.reset();
     }
 }
 
