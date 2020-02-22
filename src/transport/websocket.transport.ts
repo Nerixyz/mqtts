@@ -1,7 +1,7 @@
 import { Transport } from './transport';
 import WebSocket = require('ws');
 
-export class WebsocketTransport extends Transport<{ url: string, additionalOptions?: WebSocket.ClientOptions }> {
+export class WebsocketTransport extends Transport<{ url: string; additionalOptions?: WebSocket.ClientOptions }> {
     private socket: WebSocket;
 
     connect(): void {
