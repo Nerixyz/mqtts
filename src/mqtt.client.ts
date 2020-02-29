@@ -330,7 +330,8 @@ export class MqttClient {
                 this.setDisconnected();
                 break;
             }
-            default: forceCheckFlows = true
+            default:
+                forceCheckFlows = true;
         }
         if (!this.continueFlows(packet) && forceCheckFlows) {
             this.$warning.next(new UnexpectedPacketError(packet.constructor.name));

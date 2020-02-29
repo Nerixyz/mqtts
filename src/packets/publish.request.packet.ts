@@ -60,10 +60,11 @@ export class PublishRequestPacket extends MqttPacket {
     private _topic: string;
     private _payload: Buffer;
 
-    public constructor(topic?: string, payload?: Buffer | string | undefined) {
+    public constructor(topic?: string, payload?: Buffer | string | undefined, qos?: number) {
         super(PacketTypes.TYPE_PUBLISH);
         this._topic = topic ?? '';
         this._payload = payload ? (payload instanceof Buffer ? payload : Buffer.from(payload)) : Buffer.from([]);
+        this.qosLevel = qos ?? 0;
     }
 
     read(stream: PacketStream): void {

@@ -1,7 +1,7 @@
 import { PingResponsePacket, PublishAckPacket, PublishCompletePacket, PublishReceivedPacket } from '../packets';
 import { MqttMessage } from '../mqtt.message';
-import { PacketTypes } from '../mqtt.constants';
 import { PacketFlowFunc } from './packet-flow';
+import { isPubRel } from '../mqtt.utilities';
 
 export function incomingPingFlow(): PacketFlowFunc<void> {
     return success => ({
@@ -27,9 +27,7 @@ export function incomingPublishFlow(message: MqttMessage, identifier = -1): Pack
             if (emit) success(message);
             return packet;
         },
-        accept: packet =>
-            packet.packetType === PacketTypes.TYPE_PUBREL &&
-            (packet as { identifier: number }).identifier === identifier,
+        accept: packet => isPubRel(packet) && packet.identifier === identifier,
         next: () => {
             success(message);
             const response = new PublishCompletePacket();

@@ -1,6 +1,6 @@
 {
   "name": "mqtts",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "MQTT client in Typescript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,7 +33,8 @@
     "rxjs": "^6.5.4",
     "ts-custom-error": "^3.1.1",
     "ts-xor": "^1.0.8",
-    "ws": "^7.2.1"
+    "ws": "^7.2.1",
+    "@types/ws": "^7.2.1"
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.29",
@@ -41,7 +42,6 @@
     "@types/jest": "^25.1.2",
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.7.0",
-    "@types/ws": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^2.19.1",
     "@typescript-eslint/parser": "^2.19.1",
     "eslint": "^6.8.0",

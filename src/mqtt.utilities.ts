@@ -1,5 +1,23 @@
 import { ListenerInfo } from './mqtt.types';
 import { MqttMessage } from './mqtt.message';
+import { MqttPacket } from './mqtt.packet';
+import {
+    ConnectRequestPacket,
+    ConnectResponsePacket,
+    DisconnectRequestPacket,
+    PingRequestPacket,
+    PingResponsePacket,
+    PublishAckPacket,
+    PublishCompletePacket,
+    PublishReceivedPacket,
+    PublishReleasePacket,
+    PublishRequestPacket,
+    SubscribeRequestPacket,
+    SubscribeResponsePacket,
+    UnsubscribeRequestPacket,
+    UnsubscribeResponsePacket,
+} from './packets';
+import { PacketTypes } from './mqtt.constants';
 
 export function topicListener<T>(options: {
     topic: string;
@@ -55,3 +73,35 @@ export interface Resolvers<T> {
 }
 
 export const nullOrUndefined = (input: any) => input == undefined;
+
+export function isPacket(target: any, type: number): boolean {
+    return target.packetType === type;
+}
+
+export const isConnect = (target: MqttPacket): target is ConnectRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_CONNECT);
+export const isConnAck = (target: MqttPacket): target is ConnectResponsePacket =>
+    isPacket(target, PacketTypes.TYPE_CONNACK);
+export const isPublish = (target: MqttPacket): target is PublishRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_PUBLISH);
+export const isPubAck = (target: MqttPacket): target is PublishAckPacket => isPacket(target, PacketTypes.TYPE_PUBACK);
+export const isPubRec = (target: MqttPacket): target is PublishReceivedPacket =>
+    isPacket(target, PacketTypes.TYPE_PUBREC);
+export const isPubRel = (target: MqttPacket): target is PublishReleasePacket =>
+    isPacket(target, PacketTypes.TYPE_PUBREL);
+export const isPubComp = (target: MqttPacket): target is PublishCompletePacket =>
+    isPacket(target, PacketTypes.TYPE_PUBCOMP);
+export const isSubscribe = (target: MqttPacket): target is SubscribeRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_SUBSCRIBE);
+export const isSubAck = (target: MqttPacket): target is SubscribeResponsePacket =>
+    isPacket(target, PacketTypes.TYPE_SUBACK);
+export const isUnsubscribe = (target: MqttPacket): target is UnsubscribeRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_UNSUBSCRIBE);
+export const isUnsubAck = (target: MqttPacket): target is UnsubscribeResponsePacket =>
+    isPacket(target, PacketTypes.TYPE_UNSUBACK);
+export const isPingReq = (target: MqttPacket): target is PingRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_PINGREQ);
+export const isPingResp = (target: MqttPacket): target is PingResponsePacket =>
+    isPacket(target, PacketTypes.TYPE_PINGRESP);
+export const isDisconnect = (target: MqttPacket): target is DisconnectRequestPacket =>
+    isPacket(target, PacketTypes.TYPE_DISCONNECT);

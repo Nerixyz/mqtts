@@ -4,22 +4,18 @@ import {
     ConnectResponsePacket,
     DisconnectRequestPacket,
     PingRequestPacket,
-    PublishAckPacket,
-    PublishCompletePacket,
-    PublishReceivedPacket,
     PublishReleasePacket,
     PublishRequestPacket,
     SubscribeRequestPacket,
     SubscribeResponsePacket,
     UnsubscribeRequestPacket,
-    UnsubscribeResponsePacket,
 } from '../packets';
 import { defaults, random } from 'lodash';
-import { PacketTypes } from '../mqtt.constants';
 import { MqttMessageOutgoing } from '../mqtt.message';
 import { MqttSubscription } from '../mqtt.types';
 import { PacketFlowFunc } from './packet-flow';
 import { MqttPacket } from '../mqtt.packet';
+import { isConnAck, isPingResp, isPubAck, isPubComp, isPubRec, isSubAck, isUnsubAck } from '../mqtt.utilities';
 
 export function outgoingConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ConnectRequestOptions> {
     options = defaults(options, {
@@ -30,7 +26,7 @@ export function outgoingConnectFlow(options: ConnectRequestOptions): PacketFlowF
     });
     return (success, error) => ({
         start: () => new ConnectRequestPacket(options),
-        accept: packet => packet.packetType === PacketTypes.TYPE_CONNACK,
+        accept: isConnAck,
         next: (res: ConnectResponsePacket) => (res.isSuccess ? success(options) : error(res.errorName)),
     });
 }
@@ -46,7 +42,7 @@ export function outgoingDisconnectFlow(): PacketFlowFunc<void> {
 export function outgoingPingFlow(): PacketFlowFunc<void> {
     return success => ({
         start: () => new PingRequestPacket(),
-        accept: packet => packet.packetType === PacketTypes.TYPE_PINGRESP,
+        accept: isPingResp,
         next: () => success(),
     });
 }
@@ -69,24 +65,22 @@ export function outgoingPublishFlow(
 
             return packet;
         },
-        accept: packet => {
-            if (message.qosLevel === 1 && packet.packetType === PacketTypes.TYPE_PUBACK) {
-                return (packet as PublishAckPacket).identifier === id;
+        accept: (packet: MqttPacket) => {
+            if (message.qosLevel === 1 && isPubAck(packet)) {
+                return packet.identifier === id;
             } else if (message.qosLevel === 2) {
-                if (packet.packetType === PacketTypes.TYPE_PUBREC) {
-                    return (packet as PublishReceivedPacket).identifier === id;
-                } else if (receivedPubRec && packet.packetType === PacketTypes.TYPE_PUBCOMP) {
-                    return (packet as PublishCompletePacket).identifier === id;
+                if (isPubRec(packet)) {
+                    return packet.identifier === id;
+                } else if (receivedPubRec && isPubComp(packet)) {
+                    return packet.identifier === id;
                 }
             }
             return false;
         },
-        next: packet => {
-            const packetType = packet.packetType;
-
-            if (packetType === PacketTypes.TYPE_PUBACK || packetType === PacketTypes.TYPE_PUBCOMP) {
+        next: (packet: MqttPacket) => {
+            if (isPubAck(packet) || isPubComp(packet)) {
                 success(message);
-            } else if (packetType === PacketTypes.TYPE_PUBREC) {
+            } else if (isPubRec(packet)) {
                 receivedPubRec = true;
                 return new PublishReleasePacket(id);
             }
@@ -105,8 +99,7 @@ export function outgoingSubscribeFlow(
             packet.identifier = id;
             return packet;
         },
-        accept: packet =>
-            packet.packetType === PacketTypes.TYPE_SUBACK && (packet as SubscribeResponsePacket).identifier === id,
+        accept: (packet: MqttPacket) => isSubAck(packet) && packet.identifier === id,
         next: (packet: SubscribeResponsePacket) => {
             if (packet.returnCodes.every(value => !packet.isError(value))) {
                 success(subscription);
@@ -125,8 +118,7 @@ export function outgoingUnsubscribeFlow(subscription: MqttSubscription, identifi
             packet.identifier = id;
             return packet;
         },
-        accept: packet =>
-            packet.packetType === PacketTypes.TYPE_UNSUBACK && (packet as UnsubscribeResponsePacket).identifier === id,
+        accept: (packet: MqttPacket) => isUnsubAck(packet) && packet.identifier === id,
         next: () => success(),
     });
 }
