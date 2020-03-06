@@ -69,7 +69,7 @@ export class MqttParser {
         },
     };
 
-    public constructor(errorCallback?: (e: Error) => void) {
+    public constructor(errorCallback?: (e: Error) => void, protected debug?: (msg: string) => void) {
         this.stream = PacketStream.empty();
         /* eslint @typescript-eslint/no-empty-function: "off" */
         this.errorCallback = errorCallback ?? (() => {});
@@ -97,6 +97,10 @@ export class MqttParser {
                     // @ts-ignore - if undefined -> catched
                     packet = this.mapping.find(x => x[0] === type)[1]();
                 } catch (e) {
+                    this.debug?.(
+                        `No packet found for ${type};
+                         @${this.stream.position}/${this.stream.length}
+                         parsed: ${results.length}`);
                     continue;
                 }
 
@@ -108,16 +112,33 @@ export class MqttParser {
                     this.stream.cut();
                     startPos = this.stream.position;
                 })
-                    .catch(EndOfStreamError, () => {
+                    .catch(EndOfStreamError, e => {
+                        this.debug?.(`End of stream: ${e.stack}`);
                         this.stream.position = startPos;
                         exitParser = true;
                     })
                     .catch((e: any) => {
+                        this.debug?.(
+                            `Error in parser (type: ${type}): 
+                        ${e.stack}; 
+                        exiting; 
+                        resetting;
+                        stream: ${this.stream.data.toString('base64')}`);
+
                         this.errorCallback(e);
+                        exitParser = true;
+                        this.stream = PacketStream.empty();
                     });
                 if (exitParser) break;
             }
         } catch (e) {
+            this.debug?.(
+                `Error in parser: 
+                ${e.stack};
+                 resetting; 
+                 stream: ${this.stream.data.toString('base64')}`);
+
+            this.stream = PacketStream.empty();
             this.errorCallback(e);
         }
         this.lock.unlock();

@@ -37,6 +37,8 @@ import { UnexpectedPacketError } from './errors';
 
 export class MqttClient {
     private mqttDebug = debug('mqtt:client');
+    private packetDebug = this.mqttDebug.extend('packet');
+    private pingDebug = this.mqttDebug.extend('ping');
     // wrapper functions
     protected executeNextTick: ExecuteNextTick;
     protected executePeriodically: ExecutePeriodically;
@@ -98,7 +100,7 @@ export class MqttClient {
             connecting: false,
             disconnected: false,
         };
-        this.parser = options.parser ?? new MqttParser(e => this.$error.next(e));
+        this.parser = options.parser ?? new MqttParser(e => this.$error.next(e), this.mqttDebug.extend('parser'));
         this.transport =
             options.transport ??
             new TlsTransport({
@@ -270,10 +272,9 @@ export class MqttClient {
         }
         this.mqttDebug(`Starting keep-alive-ping {delay: ${value}}`);
         this.keepAliveTimer = this.executePeriodically(value * 1000, () => {
-            const pingDebug = this.mqttDebug.extend('ping');
             this.startFlow(outgoingPingFlow())
-                .then(() => pingDebug(`PingPong @ ${Date.now()}`))
-                .catch(() => pingDebug('PingPong failed.'));
+                .then(() => this.pingDebug(`PingPong @ ${Date.now()}`))
+                .catch(() => this.pingDebug('PingPong failed.'));
         });
     }
 
@@ -340,7 +341,7 @@ export class MqttClient {
 
     protected logPacket(packet: MqttPacket, action: string) {
         if (packet.packetType !== PacketTypes.TYPE_PINGREQ && packet.packetType !== PacketTypes.TYPE_PINGRESP)
-            this.mqttDebug.extend('packet')(
+            this.packetDebug(
                 `${action} ${packet.constructor.name}` +
                     (packet.identifier ? ` id: ${packet.identifier}` : '') +
                     // @ts-ignore - instanceof is too expensive
