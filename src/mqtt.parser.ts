@@ -100,7 +100,8 @@ export class MqttParser {
                     this.debug?.(
                         `No packet found for ${type};
                          @${this.stream.position}/${this.stream.length}
-                         parsed: ${results.length}`);
+                         parsed: ${results.length}`,
+                    );
                     continue;
                 }
 
@@ -123,7 +124,8 @@ export class MqttParser {
                         ${e.stack}; 
                         exiting; 
                         resetting;
-                        stream: ${this.stream.data.toString('base64')}`);
+                        stream: ${this.stream.data.toString('base64')}`,
+                        );
 
                         this.errorCallback(e);
                         exitParser = true;
@@ -136,7 +138,8 @@ export class MqttParser {
                 `Error in parser: 
                 ${e.stack};
                  resetting; 
-                 stream: ${this.stream.data.toString('base64')}`);
+                 stream: ${this.stream.data.toString('base64')}`,
+            );
 
             this.stream = PacketStream.empty();
             this.errorCallback(e);

@@ -87,7 +87,9 @@ export abstract class MqttPacket {
 
             this.remainingPacketLength += (encodedByte & 0x7f) * multiplier;
             if (multiplier > 128 * 128 * 128) {
-                throw new Error(`Invalid length @${stream.position}/${stream.length}; currentLength: ${this.remainingPacketLength}`);
+                throw new Error(
+                    `Invalid length @${stream.position}/${stream.length}; currentLength: ${this.remainingPacketLength}`,
+                );
             }
             multiplier *= 0x80;
         } while ((encodedByte & 0x80) !== 0);
