@@ -45,7 +45,7 @@ export class SubscribeRequestPacket extends MqttPacket {
         const data = PacketStream.empty()
             .writeString(this._topic)
             .writeByte(this._qosLevel);
-        this._remainingPacketLength = data.length;
+        this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);
     }

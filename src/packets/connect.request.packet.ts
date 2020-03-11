@@ -49,7 +49,7 @@ export class ConnectRequestPacket extends MqttPacket {
         if (will) data.writeString(will.topic).writeString(will.payload.toString());
         if (username) data.writeString(username);
         if (password) data.writeString(password);
-        this._remainingPacketLength = data.length;
+        this.remainingPacketLength = data.length;
         super.write(stream);
 
         stream.write(data.data);

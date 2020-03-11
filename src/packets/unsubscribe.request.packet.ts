@@ -32,7 +32,7 @@ export class UnsubscribeRequestPacket extends MqttPacket {
 
     public write(stream: PacketStream): void {
         const data = PacketStream.empty().writeString(this._topic);
-        this._remainingPacketLength = data.length;
+        this.remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);
     }
