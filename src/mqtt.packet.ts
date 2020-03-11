@@ -2,6 +2,9 @@ import { PacketStream } from './packet-stream';
 import { nullOrUndefined } from './mqtt.utilities';
 
 export abstract class MqttPacket {
+    get remainingPacketLength(): number {
+        return this._remainingPacketLength;
+    }
     public get packetType(): number {
         return this._packetType;
     }
@@ -23,7 +26,7 @@ export abstract class MqttPacket {
 
     private readonly _packetType: number;
     protected packetFlags = 0;
-    protected remainingPacketLength = 0;
+    protected _remainingPacketLength = 0;
     private _identifier: number;
 
     private static nextId = 0;
@@ -67,7 +70,7 @@ export abstract class MqttPacket {
 
     public write(stream: PacketStream): void {
         stream.writeByte(((this._packetType & 0x0f) << 4) | (this.packetFlags & 0x0f));
-        if (this.hasIdentifier && !this.inlineIdentifier) this.remainingPacketLength += 2;
+        if (this.hasIdentifier && !this.inlineIdentifier) this._remainingPacketLength += 2;
         this.writeRemainingLength(stream);
         if (this.hasIdentifier && !this.inlineIdentifier) this.writeIdentifier(stream);
     }
@@ -78,17 +81,17 @@ export abstract class MqttPacket {
     }
 
     private readRemainingLength(stream: PacketStream): void {
-        this.remainingPacketLength = 0;
+        this._remainingPacketLength = 0;
         let multiplier = 1;
 
         let encodedByte;
         do {
             encodedByte = stream.readByte();
 
-            this.remainingPacketLength += (encodedByte & 0x7f) * multiplier;
+            this._remainingPacketLength += (encodedByte & 0x7f) * multiplier;
             if (multiplier > 128 * 128 * 128) {
                 throw new Error(
-                    `Invalid length @${stream.position}/${stream.length}; currentLength: ${this.remainingPacketLength}`,
+                    `Invalid length @${stream.position}/${stream.length}; currentLength: ${this._remainingPacketLength}`,
                 );
             }
             multiplier *= 0x80;
@@ -96,7 +99,7 @@ export abstract class MqttPacket {
     }
 
     private writeRemainingLength(stream: PacketStream): void {
-        let num = this.remainingPacketLength;
+        let num = this._remainingPacketLength;
         let digit = 0;
         do {
             digit = num % 128 | 0;

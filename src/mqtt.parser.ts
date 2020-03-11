@@ -1,7 +1,6 @@
 import { MqttPacket } from './mqtt.packet';
 import { PacketTypes } from './mqtt.constants';
 import { PacketStream } from './packet-stream';
-import Bluebird = require('bluebird');
 import { EndOfStreamError } from './errors';
 import {
     ConnectResponsePacket,
@@ -18,10 +17,13 @@ import {
     UnsubscribeRequestPacket,
     UnsubscribeResponsePacket,
 } from './packets';
+import { createLock } from './mqtt.utilities';
 
 export class MqttParser {
     protected stream: PacketStream;
     protected errorCallback: (e: Error) => void;
+
+    protected lock = createLock();
 
     public mapping: [number, () => MqttPacket][] = [
         [PacketTypes.TYPE_CONNACK, () => new ConnectResponsePacket()],
@@ -39,36 +41,6 @@ export class MqttParser {
         [PacketTypes.TYPE_DISCONNECT, () => new DisconnectRequestPacket()],
     ];
 
-    /**
-     * Some workaround for async requests:
-     * This prevents the execution if there's already something in the buffer.
-     * Note: if something fails, this will lock forever
-     * @type {{unlock: () => void; resolve: null; lock: () => void; locked: boolean}}
-     */
-    private lock: Lock = {
-        locked: false,
-        lock() {
-            this.locked = true;
-        },
-        unlock() {
-            this.locked = false;
-            if (this.resolve) {
-                this.resolve();
-                this.resolve = null;
-            }
-        },
-        resolve: null,
-        wait() {
-            if (this.locked) {
-                return new Promise<void>(resolve => {
-                    this.resolve = resolve;
-                });
-            } else {
-                return Promise.resolve();
-            }
-        },
-    };
-
     public constructor(errorCallback?: (e: Error) => void, protected debug?: (msg: string) => void) {
         this.stream = PacketStream.empty();
         /* eslint @typescript-eslint/no-empty-function: "off" */
@@ -78,7 +50,7 @@ export class MqttParser {
     public reset() {
         this.stream = PacketStream.empty();
         this.lock.locked = false;
-        this.lock.resolve = null;
+        this.lock.resolver = null;
     }
 
     public async parse(data: Buffer): Promise<MqttPacket[]> {
@@ -107,18 +79,19 @@ export class MqttParser {
 
                 this.stream.seek(-1);
                 let exitParser = false;
-                await Bluebird.try(() => {
+                try {
                     packet.read(this.stream);
                     results.push(packet);
                     this.stream.cut();
                     startPos = this.stream.position;
-                })
-                    .catch(EndOfStreamError, e => {
-                        this.debug?.(`End of stream: ${e.stack}`);
+                } catch (e) {
+                    if (e instanceof EndOfStreamError) {
+                        this.debug?.(
+                            `EOS:\n  ${packet.remainingPacketLength} got: ${this.stream.length} (+) ${data.byteLength};\n  return: ${startPos};`,
+                        );
                         this.stream.position = startPos;
                         exitParser = true;
-                    })
-                    .catch((e: any) => {
+                    } else {
                         this.debug?.(
                             `Error in parser (type: ${type}): 
                         ${e.stack}; 
@@ -130,7 +103,8 @@ export class MqttParser {
                         this.errorCallback(e);
                         exitParser = true;
                         this.stream = PacketStream.empty();
-                    });
+                    }
+                }
                 if (exitParser) break;
             }
         } catch (e) {
@@ -147,12 +121,4 @@ export class MqttParser {
         this.lock.unlock();
         return results;
     }
-}
-
-interface Lock {
-    resolve: (() => void) | null;
-    locked: boolean;
-    lock: () => void;
-    unlock: () => void;
-    wait: () => Promise<void>;
 }

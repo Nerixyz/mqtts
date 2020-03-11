@@ -83,7 +83,7 @@ export class PublishRequestPacket extends MqttPacket {
     public write(stream: PacketStream): void {
         const data = this.writeIdentifier(PacketStream.empty().writeString(this._topic)).write(this._payload);
 
-        this.remainingPacketLength = data.length;
+        this._remainingPacketLength = data.length;
         super.write(stream);
         stream.write(data.data);
     }

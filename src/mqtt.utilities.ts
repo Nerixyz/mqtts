@@ -105,3 +105,43 @@ export const isPingResp = (target: MqttPacket): target is PingResponsePacket =>
     isPacket(target, PacketTypes.TYPE_PINGRESP);
 export const isDisconnect = (target: MqttPacket): target is DisconnectRequestPacket =>
     isPacket(target, PacketTypes.TYPE_DISCONNECT);
+
+/**
+ * Some workaround for async requests:
+ * This prevents the execution if there's already something in the buffer.
+ * Note: if something fails, this will lock forever
+ * @type {{unlock: () => void; resolve: null; lock: () => void; locked: boolean}}
+ */
+export function createLock(): Lock {
+    return {
+        locked: false,
+        lock() {
+            this.locked = true;
+        },
+        unlock() {
+            this.locked = false;
+            if (this.resolver) {
+                this.resolver();
+                this.resolver = null;
+            }
+        },
+        resolver: null,
+        wait() {
+            if (this.locked) {
+                return new Promise<void>(resolve => {
+                    this.resolver = resolve;
+                });
+            } else {
+                return Promise.resolve();
+            }
+        },
+    };
+}
+
+export interface Lock {
+    resolver: Function | null;
+    locked: boolean;
+    lock: () => void;
+    unlock: () => void;
+    wait: () => Promise<void>;
+}
