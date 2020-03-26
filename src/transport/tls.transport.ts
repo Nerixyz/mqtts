@@ -2,7 +2,7 @@ import { Transport } from './transport';
 import { TLSSocket, connect } from 'tls';
 import * as URL from 'url';
 
-export class TlsTransport extends Transport<{ url: string; enableTrace: boolean }> {
+export class TlsTransport extends Transport<{ url: string; enableTrace?: boolean }> {
     private socket: TLSSocket;
     send(data: Buffer): void {
         this.socket.write(data);
@@ -13,7 +13,7 @@ export class TlsTransport extends Transport<{ url: string; enableTrace: boolean 
         this.socket = connect({
             host: url.hostname ?? '',
             port: Number(url.port),
-            enableTrace: this.options.enableTrace,
+            enableTrace: !!this.options.enableTrace,
             timeout: 0,
         });
         this.socket.on('error', e => this.callbacks.error(e));
@@ -22,5 +22,10 @@ export class TlsTransport extends Transport<{ url: string; enableTrace: boolean 
         this.socket.on('secureConnect', () => this.callbacks.connect());
         this.socket.on('timeout', () => this.callbacks.disconnect());
         this.socket.on('data', res => this.callbacks.data(res));
+    }
+
+    disconnect(): void {
+        this.socket.removeAllListeners('close');
+        this.socket.end();
     }
 }

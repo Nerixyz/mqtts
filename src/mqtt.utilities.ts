@@ -1,4 +1,4 @@
-import { ListenerInfo } from './mqtt.types';
+import { ListenerInfo, Resolvable } from './mqtt.types';
 import { MqttMessage } from './mqtt.message';
 import { MqttPacket } from './mqtt.packet';
 import {
@@ -136,6 +136,10 @@ export function createLock(): Lock {
             }
         },
     };
+}
+
+export async function resolve<T extends object>(resolvable: Resolvable<T>): Promise<T> {
+    return typeof resolvable === 'object' ? resolvable : await resolvable();
 }
 
 export interface Lock {

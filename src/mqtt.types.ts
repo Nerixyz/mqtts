@@ -7,7 +7,10 @@ import { MqttMessage } from './mqtt.message';
 export type MqttClientConstructorOptions = XOR<
     { transport: Transport<unknown> },
     { url: string; enableTrace?: boolean }
-> & { parser?: MqttParser };
+> & {
+    parser?: MqttParser;
+    autoReconnect?: boolean;
+};
 
 export interface MqttSubscription {
     topic: string;
@@ -43,3 +46,5 @@ export interface ListenSubscribeOptions<TOut> extends ListenOptions<TOut> {
 export interface IncomingListenMessage<T> extends MqttMessage {
     params?: T;
 }
+
+export type Resolvable<T extends object> = (() => Promise<T>) | (() => T) | T;

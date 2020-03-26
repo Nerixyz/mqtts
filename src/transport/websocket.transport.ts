@@ -15,4 +15,8 @@ export class WebsocketTransport extends Transport<{ url: string; additionalOptio
     send(data: Buffer): void {
         this.socket.send(data);
     }
+
+    disconnect(): void {
+        if (![this.socket.CLOSED, this.socket.CLOSING].includes(this.socket.readyState)) this.socket.close();
+    }
 }

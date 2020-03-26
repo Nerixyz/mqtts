@@ -6,6 +6,7 @@ export abstract class Transport<T> {
     public constructor(protected options: T) {}
 
     public abstract connect(): void;
+    public abstract disconnect(): void;
 
     public abstract send(data: Buffer): void;
 }

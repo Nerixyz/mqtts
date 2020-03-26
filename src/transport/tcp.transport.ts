@@ -22,4 +22,9 @@ export class TcpTransport extends Transport<{ url: string; enableTrace?: boolean
         this.socket.on('timeout', () => this.callbacks.disconnect());
         this.socket.on('data', res => this.callbacks.data(res));
     }
+
+    disconnect(): void {
+        this.socket.removeAllListeners('close');
+        this.socket.end();
+    }
 }
