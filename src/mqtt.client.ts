@@ -161,11 +161,14 @@ export class MqttClient {
         if (noNewPromise) {
             promise = this.startFlow(this.getConnectFlow(options));
         } else {
-            promise = new Promise<void>(resolve => (this.state.startResolve = resolve));
-            this.startFlow(this.getConnectFlow(options)).then(() => this.state.startResolve?.());
+            promise = new Promise<void>((resolve, reject) => {
+                this.state.startResolve = resolve;
+                this.state.startReject = reject;
+            });
+            this.startFlow(this.getConnectFlow(options)).then(() => this.state.startResolve?.()).catch(e => this.state.startReject?.(e));
         }
         this.connectTimer = this.executeDelayed(2000, () =>
-            this.registerClient(options, true).then(() => this.state.startResolve?.()),
+            this.registerClient(options, true).then(() => this.state.startResolve?.()).catch(e => this.state.startReject?.(e)),
         );
         return promise;
     }
@@ -187,7 +190,7 @@ export class MqttClient {
     }
 
     public disconnect(): Promise<void> {
-        //his.autoReconnect = false;
+        this.autoReconnect = false;
         return this.startFlow(outgoingDisconnectFlow());
     }
 
@@ -312,10 +315,13 @@ export class MqttClient {
         let forceCheckFlows = false;
         switch (packet.packetType) {
             case PacketTypes.TYPE_CONNACK: {
-                this.setConnected();
-                this.$connect.next(packet as ConnectResponsePacket);
-                if (this.state?.connectOptions?.keepAlive) {
-                    this.updateKeepAlive(this.state.connectOptions.keepAlive);
+                const connack = packet as ConnectResponsePacket;
+                if(connack.isSuccess) {
+                    this.setConnected();
+                    this.$connect.next(connack);
+                    if (this.state?.connectOptions?.keepAlive) {
+                        this.updateKeepAlive(this.state.connectOptions.keepAlive);
+                    }
                 }
                 break;
             }
@@ -407,4 +413,5 @@ export interface MqttClientState {
     connectOptions?: RegisterClientOptions;
     connectOptionsResolver?: Resolvable<RegisterClientOptions>;
     startResolve?: () => void;
+    startReject?: (e: any) => void;
 }
