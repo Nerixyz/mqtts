@@ -165,10 +165,14 @@ export class MqttClient {
                 this.state.startResolve = resolve;
                 this.state.startReject = reject;
             });
-            this.startFlow(this.getConnectFlow(options)).then(() => this.state.startResolve?.()).catch(e => this.state.startReject?.(e));
+            this.startFlow(this.getConnectFlow(options))
+                .then(() => this.state.startResolve?.())
+                .catch(e => this.state.startReject?.(e));
         }
         this.connectTimer = this.executeDelayed(2000, () =>
-            this.registerClient(options, true).then(() => this.state.startResolve?.()).catch(e => this.state.startReject?.(e)),
+            this.registerClient(options, true)
+                .then(() => this.state.startResolve?.())
+                .catch(e => this.state.startReject?.(e)),
         );
         return promise;
     }
@@ -316,7 +320,7 @@ export class MqttClient {
         switch (packet.packetType) {
             case PacketTypes.TYPE_CONNACK: {
                 const connack = packet as ConnectResponsePacket;
-                if(connack.isSuccess) {
+                if (connack.isSuccess) {
                     this.setConnected();
                     this.$connect.next(connack);
                     if (this.state?.connectOptions?.keepAlive) {
@@ -367,10 +371,15 @@ export class MqttClient {
     }
 
     protected reset() {
+        if(this.connectTimer)
+            this.stopExecuting(this.connectTimer);
         this.connectTimer = undefined;
+        if(this.keepAliveTimer)
+            this.stopExecuting(this.keepAliveTimer);
         this.keepAliveTimer = undefined;
         this.activeFlows = [];
         this.state.startResolve = undefined;
+        this.state.startReject = undefined;
         this.parser.reset();
     }
 
