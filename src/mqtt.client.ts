@@ -169,7 +169,7 @@ export class MqttClient {
                 .then(() => this.state.startResolve?.())
                 .catch(e => this.state.startReject?.(e));
         }
-        this.connectTimer = this.executeDelayed(2000, () =>
+        this.connectTimer = options.connectDelay === null ? undefined : this.executeDelayed(options.connectDelay ?? 2000, () =>
             this.registerClient(options, true)
                 .then(() => this.state.startResolve?.())
                 .catch(e => this.state.startReject?.(e)),
@@ -371,11 +371,9 @@ export class MqttClient {
     }
 
     protected reset() {
-        if(this.connectTimer)
-            this.stopExecuting(this.connectTimer);
+        if (this.connectTimer) this.stopExecuting(this.connectTimer);
         this.connectTimer = undefined;
-        if(this.keepAliveTimer)
-            this.stopExecuting(this.keepAliveTimer);
+        if (this.keepAliveTimer) this.stopExecuting(this.keepAliveTimer);
         this.keepAliveTimer = undefined;
         this.activeFlows = [];
         this.state.startResolve = undefined;
@@ -394,7 +392,8 @@ export class MqttClient {
         this.state.connecting = false;
         this.state.connected = true;
         this.state.disconnected = false;
-        this.stopExecuting(this.connectTimer);
+        if(this.connectTimer)
+            this.stopExecuting(this.connectTimer);
     }
 
     protected setDisconnected(reason?: string) {

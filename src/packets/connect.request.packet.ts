@@ -70,4 +70,5 @@ export interface ConnectRequestOptions {
     username?: string;
     password?: string;
     clean?: boolean;
+    connectDelay?: number | null;
 }
