@@ -169,11 +169,14 @@ export class MqttClient {
                 .then(() => this.state.startResolve?.())
                 .catch(e => this.state.startReject?.(e));
         }
-        this.connectTimer = options.connectDelay === null ? undefined : this.executeDelayed(options.connectDelay ?? 2000, () =>
-            this.registerClient(options, true)
-                .then(() => this.state.startResolve?.())
-                .catch(e => this.state.startReject?.(e)),
-        );
+        this.connectTimer =
+            options.connectDelay === null
+                ? undefined
+                : this.executeDelayed(options.connectDelay ?? 2000, () =>
+                      this.registerClient(options, true)
+                          .then(() => this.state.startResolve?.())
+                          .catch(e => this.state.startReject?.(e)),
+                  );
         return promise;
     }
 
@@ -198,40 +201,41 @@ export class MqttClient {
         return this.startFlow(outgoingDisconnectFlow());
     }
 
-    public listenSubscribe<T>(listener: ListenSubscribeOptions<T>): Promise<Observable<T>> {
+    public listenSubscribe<T = IncomingListenMessage<any>>(topic: string): Promise<Observable<T>>;
+    public listenSubscribe<T = IncomingListenMessage<any>>(options: ListenSubscribeOptions<T>): Promise<Observable<T>>;
+    public listenSubscribe<T = IncomingListenMessage<any>>(
+        options: string | ListenSubscribeOptions<T>,
+    ): Promise<Observable<T>> {
+        const listener = typeof options === 'string' ? { topic: options } : options;
         return this.subscribe({
             ...listener.subscriptionInfo,
             topic: listener.topic.replace(/\/:[A-Za-z-_0-9]+/g, '/+'),
         }).then(() => this.listen(listener));
     }
 
-    public listen<T>(listener: ListenOptions<T>): Observable<T> {
+    public listen<T>(topic: string): Observable<T>;
+    public listen<T>(options: ListenOptions<T>): Observable<T>;
+    public listen<T>(options: string | ListenOptions<T>): Observable<T> {
+        const listener = typeof options === 'string' ? { topic: options } : options;
         const paramRegex = /\/:[A-Za-z-_0-9]+/g;
         let baseTopic = listener.topic;
         if (listener.topic.match(paramRegex)) {
             baseTopic = listener.topic.replace(paramRegex, '/+');
         }
-        // @ts-ignore
-        return this.$message
-            .pipe(
-                filter(v => {
-                    if (!matchTopic(baseTopic, v.topic)) return false;
-                    if (typeof listener.validator === null) return true;
-                    if (!listener.validator) {
-                        return v.payload && v.payload.length > 0;
-                    }
-                    return listener.validator(v);
-                }),
-            )
-            .pipe(
-                map(
-                    (v: IncomingListenMessage<any>): IncomingListenMessage<any> => {
-                        v.params = extractParams(listener.topic, v.topic);
-                        return v;
-                    },
-                ),
-            )
-            .pipe(map(v => (listener.transformer ?? (x => x))(v)));
+        return this.$message.pipe(
+            filter(v => {
+                if (!matchTopic(baseTopic, v.topic)) return false;
+                if (listener.validator === null) return true;
+                if (!listener.validator) {
+                    return !!v.payload;
+                }
+                return listener.validator(v);
+            }),
+            map((v: IncomingListenMessage<any>) => {
+                v.params = extractParams(listener.topic, v.topic);
+                return listener.transformer ? listener.transformer(v) : v;
+            }),
+        ) as Observable<T>;
     }
 
     public startFlow<T>(flow: PacketFlowFunc<T>): Promise<T> {
@@ -392,8 +396,7 @@ export class MqttClient {
         this.state.connecting = false;
         this.state.connected = true;
         this.state.disconnected = false;
-        if(this.connectTimer)
-            this.stopExecuting(this.connectTimer);
+        if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
     protected setDisconnected(reason?: string) {
