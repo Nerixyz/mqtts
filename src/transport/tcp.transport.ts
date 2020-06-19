@@ -1,30 +1,30 @@
 import { Transport } from './transport';
-import * as URL from 'url';
-import { Socket, connect } from 'net';
+import { Socket } from 'net';
 
-export class TcpTransport extends Transport<{ url: string; enableTrace?: boolean }> {
-    private socket: Socket;
-    send(data: Buffer): void {
-        this.socket.write(data);
+export interface TcpTransportOptions {
+    host: string;
+    port: number;
+}
+
+export class TcpTransport extends Transport<TcpTransportOptions> {
+    public duplex: Socket;
+
+    constructor(options: TcpTransportOptions) {
+        super(options);
+        this.duplex = new Socket();
+        this.duplex.setNoDelay(true);
+
+        // buffer packets
+        this.duplex.cork();
     }
 
-    connect(): void {
-        const url = URL.parse(this.options.url);
-        this.socket = connect({
-            host: url.hostname ?? '',
-            port: Number(url.port),
-            timeout: 0,
-        });
-        this.socket.on('error', e => this.callbacks.error(e));
-        this.socket.on('end', () => this.callbacks.disconnect());
-        this.socket.on('close', () => this.callbacks.disconnect());
-        this.socket.on('connect', () => this.callbacks.connect());
-        this.socket.on('timeout', () => this.callbacks.disconnect());
-        this.socket.on('data', res => this.callbacks.data(res));
-    }
-
-    disconnect(): void {
-        this.socket.removeAllListeners('close');
-        this.socket.end();
+    connect(): Promise<void> {
+        return new Promise(resolve =>
+            this.duplex.connect(this.options.port, this.options.host, () => {
+                // flush
+                this.duplex.uncork();
+                resolve();
+            }),
+        );
     }
 }

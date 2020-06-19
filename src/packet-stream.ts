@@ -74,10 +74,11 @@ export class PacketStream {
 
     // Write
 
-    public write(data: Buffer): this {
+    public write(data: Buffer, move = true): this {
         if (this._data) this._data = Buffer.concat([this._data, data]);
         else this._data = data;
-        this.move(data.length);
+
+        if(move) this.move(data.length);
         return this;
     }
     public writeRawString(data: string): this {

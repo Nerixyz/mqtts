@@ -1,31 +1,38 @@
 import { Transport } from './transport';
-import { TLSSocket, connect } from 'tls';
-import * as URL from 'url';
+import { TLSSocket } from 'tls';
+import { Socket } from 'net';
 
-export class TlsTransport extends Transport<{ url: string; enableTrace?: boolean }> {
-    private socket: TLSSocket;
-    send(data: Buffer): void {
-        this.socket.write(data);
+export interface TlsTransportOptions {
+    host: string;
+    port: number;
+    enableTrace?: boolean;
+}
+export class TlsTransport extends Transport<TlsTransportOptions> {
+    public duplex: TLSSocket;
+    private readonly underlyingSocket: Socket;
+
+    constructor(options: TlsTransportOptions) {
+        super(options);
+        this.underlyingSocket = new Socket();
+        this.underlyingSocket.setNoDelay(true);
+        this.duplex = new TLSSocket(this.underlyingSocket);
+        this.duplex.setNoDelay(true);
+        if (this.options.enableTrace) {
+            this.duplex.enableTrace();
+        }
+
+        // buffer packets until connect()
+        this.duplex.cork();
     }
 
-    connect(): void {
-        const url = URL.parse(this.options.url);
-        this.socket = connect({
-            host: url.hostname ?? '',
-            port: Number(url.port),
-            enableTrace: !!this.options.enableTrace,
-            timeout: 0,
-        });
-        this.socket.on('error', e => this.callbacks.error(e));
-        this.socket.on('end', () => this.callbacks.disconnect());
-        this.socket.on('close', () => this.callbacks.disconnect());
-        this.socket.on('secureConnect', () => this.callbacks.connect());
-        this.socket.on('timeout', () => this.callbacks.disconnect());
-        this.socket.on('data', res => this.callbacks.data(res));
-    }
-
-    disconnect(): void {
-        this.socket.removeAllListeners('close');
-        this.socket.end();
+    connect(): Promise<void> {
+        this.underlyingSocket.connect(this.options.port, this.options.host);
+        return new Promise(resolve =>
+            this.duplex.connect(this.options.port, this.options.host, () => {
+                // flush
+                this.duplex.uncork();
+                resolve();
+            }),
+        );
     }
 }
