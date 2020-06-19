@@ -138,7 +138,7 @@ export function createLock(): Lock {
     };
 }
 
-export async function resolve<T extends object>(resolvable: Resolvable<T>): Promise<T> {
+export async function resolve<T extends Record<string, unknown>>(resolvable: Resolvable<T>): Promise<T> {
     return typeof resolvable === 'object' ? resolvable : await resolvable();
 }
 

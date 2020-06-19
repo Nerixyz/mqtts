@@ -10,7 +10,6 @@ import {
     SubscribeResponsePacket,
     UnsubscribeRequestPacket,
 } from '../packets';
-import { defaults, random } from 'lodash';
 import { MqttMessageOutgoing } from '../mqtt.message';
 import { MqttSubscription } from '../mqtt.types';
 import { PacketFlowFunc } from './packet-flow';
@@ -18,12 +17,13 @@ import { MqttPacket } from '../mqtt.packet';
 import { isConnAck, isPingResp, isPubAck, isPubComp, isPubRec, isSubAck, isUnsubAck } from '../mqtt.utilities';
 
 export function outgoingConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ConnectRequestOptions> {
-    options = defaults(options, {
-        protocol: 3,
-        clientId: 'mqtt_' + random(1, 100000),
-        cleanSession: true,
+    options =  {
+        protocolLevel: 3,
+        clientId: 'mqtt_' + Math.round(Math.random()*10e5),
+        clean: true,
         keepAlive: 60,
-    });
+        ...options,
+    };
     return (success, error) => ({
         start: () => new ConnectRequestPacket(options),
         accept: isConnAck,

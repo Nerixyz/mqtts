@@ -10,7 +10,7 @@ import {
     MqttSubscription,
     RegisterClientOptions,
     Resolvable,
-    StopExecuting,
+    StopExecuting, TimerRef,
 } from './mqtt.types';
 import {
     incomingPublishFlow,
@@ -26,10 +26,9 @@ import {
 import { MqttParser } from './mqtt.parser';
 import { TlsTransport, Transport } from './transport';
 import { MqttPacket } from './mqtt.packet';
-import { pull, defaults } from 'lodash';
 import { PacketStream } from './packet-stream';
 import { PacketTypes } from './mqtt.constants';
-import { ConnectResponsePacket, PublishRequestPacket } from './packets';
+import { ConnectRequestOptions, ConnectResponsePacket, PublishRequestPacket } from './packets';
 import { MqttMessage, MqttMessageOutgoing } from './mqtt.message';
 import { filter, map } from 'rxjs/operators';
 import debug = require('debug');
@@ -77,7 +76,7 @@ export class MqttClient {
         return this.state?.connectOptions?.keepAlive ?? 0;
     }
 
-    set keepAlive(value) {
+    set keepAlive(value: number) {
         if (this.state?.connectOptions) {
             this.state.connectOptions.keepAlive = value;
             if (value) {
@@ -89,8 +88,8 @@ export class MqttClient {
     protected transport: Transport<unknown>;
     protected parser: MqttParser;
 
-    protected connectTimer?: object;
-    protected keepAliveTimer?: object;
+    protected connectTimer?: TimerRef;
+    protected keepAliveTimer?: TimerRef;
 
     protected autoReconnect: boolean;
     protected state: MqttClientState;
@@ -107,7 +106,8 @@ export class MqttClient {
         this.transport =
             options.transport ??
             new TlsTransport({
-                url: options.url,
+                host: options.host,
+                port: options.port,
                 enableTrace: options.enableTrace ?? false,
             });
 
@@ -121,39 +121,22 @@ export class MqttClient {
         }
     }
 
-    public connect(options?: Resolvable<RegisterClientOptions>) {
+    public async connect(options?: Resolvable<RegisterClientOptions>): Promise<any> {
         if (this.state.connected || this.state.connecting) {
             throw new Error('Invalid State: The client is already connecting/connected!');
         }
         this.mqttDebug('Connecting...');
         this.state.connectOptionsResolver = this.state.connectOptionsResolver ?? options;
         this.setConnecting();
-        return new Promise(resolve => {
-            this.transport.callbacks = {
-                disconnect: (data?: Error) => {
-                    if (data) {
-                        this.mqttDebug(`Transport disconnected with ${data}\n${data.stack}`);
-                        this.$error.next(data);
-                    }
-                    this.setDisconnected(`error in transport ${data?.name} ${data?.stack}`);
-                },
-                connect: () => {
-                    this.$open.next();
-                    resolve();
-                },
-                error: (e: Error) => this.$error.next(e),
-                data: (data: Buffer) => this.parseData(data),
-            };
-
-            this.transport.connect();
-        }).then(async () => this.registerClient(await this.getConnectOptions()));
+        await this.transport.connect();
+        return this.registerClient(await this.getConnectOptions());
     }
 
     protected async getConnectOptions(): Promise<RegisterClientOptions> {
-        return (this.state.connectOptions = defaults(
-            await resolve(this.state.connectOptionsResolver || {}),
-            this.state.connectOptions ?? {},
-        ));
+        return (this.state.connectOptions = {
+            ...this.state.connectOptions,
+            ...await resolve(this.state.connectOptionsResolver || {}),
+        });
     }
 
     protected registerClient(options: RegisterClientOptions, noNewPromise = false): Promise<any> {
@@ -180,7 +163,7 @@ export class MqttClient {
         return promise;
     }
 
-    protected getConnectFlow(options: any): PacketFlowFunc<any> {
+    protected getConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<any> {
         return outgoingConnectFlow(options);
     }
 
@@ -283,11 +266,11 @@ export class MqttClient {
         return result;
     }
 
-    protected checkFlows() {
-        this.activeFlows = pull(this.activeFlows, ...this.activeFlows.filter(f => f.finished));
+    protected checkFlows(): void {
+        this.activeFlows = this.activeFlows.filter(flow => !flow.finished);
     }
 
-    protected updateKeepAlive(value: number) {
+    protected updateKeepAlive(value: number): void {
         value = Math.max(value - 0.5, 1);
         if (this.keepAliveTimer) {
             this.stopExecuting(this.keepAliveTimer);
@@ -300,11 +283,11 @@ export class MqttClient {
         });
     }
 
-    protected sendPacket(packet: MqttPacket) {
+    protected sendPacket(packet: MqttPacket): void {
         const stream = PacketStream.empty();
         packet.write(stream);
         this.logPacket(packet, 'Sent');
-        this.transport.send(stream.data);
+        this.transport.duplex.write(stream.data);
     }
 
     protected async parseData(data: Buffer): Promise<void> {
@@ -364,17 +347,16 @@ export class MqttClient {
         }
     }
 
-    protected logPacket(packet: MqttPacket, action: string) {
+    protected logPacket(packet: MqttPacket, action: string): void {
         if (packet.packetType !== PacketTypes.TYPE_PINGREQ && packet.packetType !== PacketTypes.TYPE_PINGRESP)
             this.packetDebug(
                 `${action} ${packet.constructor.name}` +
                     (packet.identifier ? ` id: ${packet.identifier}` : '') +
-                    // @ts-ignore - instanceof is too expensive
-                    (packet.topic ? ` topic: ${packet.topic}` : ''),
+                    ('topic' in (packet as {topic?: string}) ? ` topic: ${(packet as {topic?: string}).topic}` : ''),
             );
     }
 
-    protected reset() {
+    protected reset(): void {
         if (this.connectTimer) this.stopExecuting(this.connectTimer);
         this.connectTimer = undefined;
         if (this.keepAliveTimer) this.stopExecuting(this.keepAliveTimer);
@@ -385,13 +367,13 @@ export class MqttClient {
         this.parser.reset();
     }
 
-    protected setConnecting() {
+    protected setConnecting(): void {
         this.state.connecting = true;
         this.state.connected = false;
         this.state.disconnected = false;
     }
 
-    protected setConnected() {
+    protected setConnected(): void {
         this.mqttDebug('Connected!');
         this.state.connecting = false;
         this.state.connected = true;
@@ -399,13 +381,13 @@ export class MqttClient {
         if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
-    protected setDisconnected(reason?: string) {
+    protected setDisconnected(reason?: string): void {
         const willReconnect =
             !this.state.disconnected && this.state.connected && !this.state.connecting && this.autoReconnect;
         if (!this.state.disconnected) {
             this.$disconnect.next(reason);
         }
-        this.transport.disconnect();
+        this.transport.duplex.destroy();
         this.state.connecting = false;
         this.state.connected = false;
         this.state.disconnected = true;

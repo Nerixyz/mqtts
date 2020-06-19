@@ -55,7 +55,7 @@ export class SubscribeResponsePacket extends MqttPacket {
     }
 
     protected assertValidReturnCode(returnCode: number) {
-        if (returnCode & 0b0111_1100) {
+        if (returnCode > 2 && returnCode !== 0x80) {
             throw new Error(`Invalid return code: ${returnCode}`);
         }
     }
