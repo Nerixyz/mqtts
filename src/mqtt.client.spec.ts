@@ -5,7 +5,7 @@ import { assert, use } from 'chai';
 import { RegisterClientOptions } from './mqtt.types';
 import { PacketType } from './mqtt.constants';
 import { RequiredConnectRequestOptions } from './packets';
-import { MqttMessage } from './mqtt.message';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
 describe('MqttClient', function() {

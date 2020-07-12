@@ -2,7 +2,6 @@ import { defaultWrite, PacketWriter } from './packet-writer';
 import { PacketType } from '../mqtt.constants';
 import { assertBuffer } from '../../test/utilities';
 import { assert } from 'chai';
-import { ConnectRequestOptions } from './connect.request.packet';
 
 describe('PacketWriter', function() {
     it('should write an empty packet', function() {

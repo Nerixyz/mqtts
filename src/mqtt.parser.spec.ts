@@ -8,6 +8,7 @@ import {
 import {  Readable } from 'stream';
 import { assertIteratorDone, assertTransformerIteratorValueInstanceOf } from '../test/utilities';
 import { assert, use } from 'chai';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
 function* validPingResponse() {
