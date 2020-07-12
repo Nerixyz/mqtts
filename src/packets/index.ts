@@ -12,3 +12,5 @@ export * from './subscribe.request.packet';
 export * from './subscribe.response.packet';
 export * from './unsubscribe.request.packet';
 export * from './unsubscribe.response.packet';
+export * from './packet-reader';
+export * from './packet-writer';
