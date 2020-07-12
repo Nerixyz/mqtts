@@ -47,7 +47,7 @@ import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { toMqttTopicFilter } from './mqtt.utilities';
 
 export class MqttClient<
-    ReadMap extends PacketReadResultMap,
+    ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
     WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
 > extends MqttBaseClient<ReadMap, WriteMap> {
     private mqttDebug = debug('mqtt:client');
