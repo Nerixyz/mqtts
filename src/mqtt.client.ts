@@ -34,12 +34,10 @@ import {
     DefaultPacketReadResultMap,
     PacketReadMap,
     PacketReadResultMap,
-} from './packets/packet-reader';
-import {
     DefaultPacketWriteOptions,
     PacketWriteOptionsMap,
     PacketWriter,
-} from './packets/packet-writer';
+} from './packets';
 import { PacketType, packetTypeToString } from './mqtt.constants';
 import debug = require('debug');
 import { MqttBaseClient } from './mqtt.base-client';
@@ -74,6 +72,8 @@ export class MqttClient<
 
     protected transport: Transport<unknown>;
     protected transformer: MqttTransformer<ReadMap>;
+    protected createTransformer: () => MqttTransformer<ReadMap>;
+    protected pipeline?: Writable;
 
     protected writer: PacketWriter<WriteMap>;
 
@@ -95,26 +95,35 @@ export class MqttClient<
                 port: options.port,
                 additionalOptions: {
                     enableTrace: options.enableTrace,
-                }
+                },
             });
-        this.transformer = options.transformer ?? new MqttTransformer<ReadMap>({
+        this.createTransformer = options.createTransformer ?? (() => new MqttTransformer<ReadMap>({
             debug: this.mqttDebug.extend('transformer'),
             mapping: options.readMap ?? (DefaultPacketReadMap as PacketReadMap<ReadMap>),
-        });
+        }));
+        this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
         const packetLogger = this.mqttDebug.extend('write');
-        this.writer = options.packetWriter ?? new PacketWriter<WriteMap>({
-            logPacketWrite(packetType: PacketType, packetInfo: Record<string, string | number | boolean | undefined>) {
-                if (packetType !== PacketType.PingReq && packetType !== PacketType.PingResp) {
-                    packetLogger(
-                        `Write ${packetTypeToString(packetType)} { ${Object.entries(packetInfo)
-                            .filter(([, v]) => typeof v !== 'undefined')
-                            .map(([k, v]) => `${k}: ${v}`)
-                            .join(', ')}`,
-                    );
-                }
-            },
-        }, options.writeMap);
+        this.writer =
+            options.packetWriter ??
+            new PacketWriter<WriteMap>(
+                {
+                    logPacketWrite(
+                        packetType: PacketType,
+                        packetInfo: Record<string, string | number | boolean | undefined>,
+                    ) {
+                        if (packetType !== PacketType.PingReq && packetType !== PacketType.PingResp) {
+                            packetLogger(
+                                `Write ${packetTypeToString(packetType)} { ${Object.entries(packetInfo)
+                                    .filter(([, v]) => typeof v !== 'undefined')
+                                    .map(([k, v]) => `${k}: ${v}`)
+                                    .join(', ')}`,
+                            );
+                        }
+                    },
+                },
+                options.writeMap,
+            );
     }
 
     public async connect(options?: Resolvable<RegisterClientOptions>): Promise<any> {
@@ -122,7 +131,7 @@ export class MqttClient<
         this.mqttDebug('Connecting...');
         this.connectResolver = options;
         this.setConnecting();
-        pipeline(
+        this.pipeline = pipeline(
             this.transport.duplex,
             this.transformer,
             new Writable({
@@ -142,11 +151,13 @@ export class MqttClient<
                 },
                 objectMode: true,
             }),
-            err => err && this.emitWarning(err),
+            err => {
+                if(err)
+                    this.emitError(err);
+                if(!this.disconnected)
+                    this.setDisconnected('Pipeline finished');
+            },
         );
-        this.transport.duplex.on('close', () => {
-            this.setDisconnected('Transport closed.');
-        });
         await this.transport.connect();
         return this.registerClient(await this.resolveConnectOptions());
     }
@@ -154,15 +165,16 @@ export class MqttClient<
     protected registerClient(
         options: RegisterClientOptions,
         noNewPromise = false,
-        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>): Promise<any> {
+        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>,
+    ): Promise<any> {
         let promise;
         if (noNewPromise) {
             const flow = this.activeFlows.find(x => x.flowId === lastFlow);
-            if(!flow){
+            if (!flow) {
                 promise = Promise.reject(new Error('Could not find flow'));
             } else {
                 const packet = flow.callbacks.start();
-                if(packet) this.sendData(this.writer.write(packet.type, packet.options));
+                if (packet) this.sendData(this.writer.write(packet.type, packet.options));
                 promise = Promise.resolve();
             }
         } else {
@@ -176,9 +188,8 @@ export class MqttClient<
             typeof options.connectDelay === 'undefined'
                 ? undefined
                 : this.executeDelayed(options.connectDelay ?? 2000, () =>
-                        // This Promise will only reject if the flow wasn't found
-                      this.registerClient(options, true, lastFlow)
-                          .catch(e => this.rejectConnectPromise(e)),
+                      // This Promise will only reject if the flow wasn't found
+                      this.registerClient(options, true, lastFlow).catch(e => this.rejectConnectPromise(e)),
                   );
         return promise;
     }
@@ -193,7 +204,9 @@ export class MqttClient<
     }
 
     public subscribe(subscription: MqttSubscription): Promise<SubscribeReturnCode> {
-        return this.startFlow(outgoingSubscribeFlow(subscription) as PacketFlowFunc<ReadMap, WriteMap, SubscribeReturnCode>);
+        return this.startFlow(
+            outgoingSubscribeFlow(subscription) as PacketFlowFunc<ReadMap, WriteMap, SubscribeReturnCode>,
+        );
     }
 
     public unsubscribe(subscription: MqttSubscription): Promise<void> {
@@ -202,7 +215,7 @@ export class MqttClient<
 
     public disconnect(force = false): Promise<void> {
         this.autoReconnect = false;
-        if(!force) {
+        if (!force) {
             return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>);
         } else {
             this.setDisconnected('Forced Disconnect');
@@ -212,9 +225,12 @@ export class MqttClient<
 
     public listenSubscribe<T = IncomingListenMessage>(topic: string, handlerFn: HandlerFn<T>): Promise<RemoveHandlerFn>;
     public listenSubscribe<T = IncomingListenMessage, Params extends Record<string, string> = Record<string, string>>(
-        options: ListenSubscribeOptions<T, Params>, handlerFn: HandlerFn<T>): Promise<RemoveHandlerFn>;
+        options: ListenSubscribeOptions<T, Params>,
+        handlerFn: HandlerFn<T>,
+    ): Promise<RemoveHandlerFn>;
     public listenSubscribe<T = IncomingListenMessage, Params extends Record<string, string> = Record<string, string>>(
-        options: string | ListenSubscribeOptions<T, Params>, handlerFn: HandlerFn<T>
+        options: string | ListenSubscribeOptions<T, Params>,
+        handlerFn: HandlerFn<T>,
     ): Promise<RemoveHandlerFn> {
         const listener = typeof options === 'string' ? { topic: options } : options;
         return this.subscribe({
@@ -224,8 +240,14 @@ export class MqttClient<
     }
 
     public listen<T>(topic: string, handlerFn: HandlerFn<T>): RemoveHandlerFn;
-    public listen<T, Params extends Record<string, string>>(options: ListenOptions<T, Params>, handlerFn: HandlerFn<T>): RemoveHandlerFn;
-    public listen<T, Params extends Record<string, string>>(options: string | ListenOptions<T, Params>, handlerFn: HandlerFn<T> ): RemoveHandlerFn {
+    public listen<T, Params extends Record<string, string>>(
+        options: ListenOptions<T, Params>,
+        handlerFn: HandlerFn<T>,
+    ): RemoveHandlerFn;
+    public listen<T, Params extends Record<string, string>>(
+        options: string | ListenOptions<T, Params>,
+        handlerFn: HandlerFn<T>,
+    ): RemoveHandlerFn {
         const listener: ListenOptions<T, Params> = typeof options === 'string' ? { topic: options } : options;
         const [topicFilter, paramMatcher] = toMqttTopicFilter(listener.topic);
         return this.messageListener.addHandler({
@@ -305,9 +327,7 @@ export class MqttClient<
         this.transport.duplex.write(data);
     }
 
-    protected async handlePacket(
-        packet: MqttParseResult<ReadMap, PacketType>,
-    ): Promise<void> {
+    protected async handlePacket(packet: MqttParseResult<ReadMap, PacketType>): Promise<void> {
         this.logPacket(packet, 'Received');
         let forceCheckFlows = false;
         switch (packet.type) {
@@ -381,14 +401,13 @@ export class MqttClient<
     }
 
     protected setReady(): void {
-        super.setReady()
+        super.setReady();
         this.mqttDebug('Ready!');
         if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
     protected setDisconnected(reason?: string): void {
-        const willReconnect =
-            !this.disconnected && this.ready && !this.connecting && this.autoReconnect;
+        const willReconnect = !this.disconnected && this.ready && !this.connecting && this.autoReconnect;
         if (this.connecting) this.rejectConnectPromise(new Error('Disconnected'));
         super.setDisconnected();
         this.emitDisconnect(reason);
@@ -396,6 +415,9 @@ export class MqttClient<
         this.stopExecuting(this.keepAliveTimer);
         this.reset();
         if (willReconnect) {
+            this.transport.reset();
+            this.transformer = this.createTransformer();
+            this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
             this.connect().catch(e => this.emitError(e));
         }
     }

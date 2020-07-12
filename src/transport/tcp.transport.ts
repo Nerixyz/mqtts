@@ -7,10 +7,15 @@ export interface TcpTransportOptions {
 }
 
 export class TcpTransport extends Transport<TcpTransportOptions> {
-    public duplex: Socket;
+    // these will be set on the constructor
+    public duplex!: Socket;
 
     constructor(options: TcpTransportOptions) {
         super(options);
+        this.reset();
+    }
+
+    reset() {
         this.duplex = new Socket();
         this.duplex.setNoDelay(true);
 

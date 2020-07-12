@@ -80,32 +80,40 @@ export async function assertTransportConnectsAndDisconnects(transport: Transport
 }
 
 class MockTransport extends Transport<{ initialPackets?: Buffer[] }> {
-    written: Buffer[] = [];
-    writable = new Writable({
-        write: (chunk, encoding, callback) => {
-            this.written.push(chunk);
-            callback();
-        },
-        objectMode: true,
-    });
-    duplex: Duplex;
-
-    nextDataBuffer: Buffer[] = [];
+    // these will be set on the constructor
+    written!: Buffer[];
+    writable!: Writable;
+    duplex!: Duplex;
+    nextDataBuffer!: Buffer[];
     nextDataFn?: (data: Buffer) => void;
-    push(data: Buffer) {
-        if (this.nextDataFn) this.nextDataFn(data);
-        else this.nextDataBuffer.push(data);
-    }
 
     constructor(options: { initialPackets?: Buffer[] }) {
         super(options);
+        this.reset();
+    }
 
+    reset() {
+        this.written = [];
+        this.writable = new Writable({
+            write: (chunk, encoding, callback) => {
+                this.written.push(chunk);
+                callback();
+            },
+            objectMode: true,
+        });
+        this.nextDataBuffer = [];
         this.duplex = duplexify(
             this.writable,
             Readable.from(createMockGenerator(this)(this.options.initialPackets ?? [])),
             { objectMode: true },
         );
     }
+
+    push(data: Buffer) {
+        if (this.nextDataFn) this.nextDataFn(data);
+        else this.nextDataBuffer.push(data);
+    }
+
     connect(): Promise<void> {
         return Promise.resolve(undefined);
     }

@@ -8,11 +8,16 @@ export interface TlsTransportOptions {
     additionalOptions?: ConnectionOptions;
 }
 export class TlsTransport extends Transport<TlsTransportOptions> {
-    public duplex: TLSSocket;
-    private underlyingSocket: Socket;
+    // these will be set on the constructor
+    public duplex!: TLSSocket;
+    private underlyingSocket!: Socket;
 
     constructor(options: TlsTransportOptions) {
         super(options);
+        this.reset();
+    }
+
+    reset() {
         this.underlyingSocket = new Socket();
         this.underlyingSocket.setNoDelay(true);
         this.duplex = new TLSSocket(this.underlyingSocket);

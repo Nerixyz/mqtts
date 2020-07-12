@@ -105,5 +105,23 @@ describe('MqttClient', function() {
         });
         await client.disconnect(true);
     });
-
+    it('should reconnect', async function() {
+        const fake = sinon.fake();
+        const transport = createMockTransport([
+                Buffer.from('20020100', 'hex')
+            ]);
+        const client = new MqttClient({
+            transport,
+            packetWriter: createMockPacketWriter(fake),
+            autoReconnect: true,
+        });
+        await client.connect();
+        assert.strictEqual(fake.callCount, 1);
+        assert.strictEqual(fake.args[0][0], PacketType.Connect);
+        transport.duplex.destroy();
+        await promisifyEvent(client, 'connect');
+        assert.strictEqual(fake.callCount, 2);
+        assert.strictEqual(fake.args[1][0], PacketType.Connect);
+        await client.disconnect(true);
+    });
 });

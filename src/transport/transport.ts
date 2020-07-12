@@ -9,4 +9,5 @@ export abstract class Transport<T> {
     public constructor(protected options: T) {}
 
     public abstract connect(): Promise<void>;
+    public abstract reset(): void;
 }

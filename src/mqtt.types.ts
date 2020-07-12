@@ -17,7 +17,7 @@ export type MqttClientConstructorOptions<
     WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
 > = XOR<{ transport: Transport<unknown> }, { host: string; port: number; enableTrace?: boolean }> & {
     readMap?: PacketReadMap<ReadMap>;
-    transformer?: MqttTransformer<ReadMap>;
+    createTransformer?: () => MqttTransformer<ReadMap>;
     writeMap?: PacketWriteMap<WriteMap>;
     packetWriter?: PacketWriter<WriteMap>;
     autoReconnect?: boolean;

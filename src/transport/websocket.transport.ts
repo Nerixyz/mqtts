@@ -10,7 +10,8 @@ export interface WebsocketTransportOptions {
 }
 
 export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
-    public duplex: Duplex;
+    // this will be set on the constructor
+    public duplex!: Duplex;
     private socket?: WebSocket;
     private socketStream?: Duplex;
     private readonly readable = new PassThrough();
@@ -18,7 +19,10 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
 
     constructor(options: WebsocketTransportOptions) {
         super(options);
+        this.reset();
+    }
 
+    reset() {
         this.duplex = duplexify(this.writable, this.readable, {objectMode: true});
     }
 
