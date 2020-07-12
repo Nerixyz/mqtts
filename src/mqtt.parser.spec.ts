@@ -4,12 +4,11 @@ import {
     PingResponsePacket,
     SubscribeResponsePacket,
     UnexpectedPacketError,
-} from '../src';
+} from './index';
 import {  Readable } from 'stream';
-import { assertIteratorDone, assertIteratorValueInstanceOf } from './utilities';
+import { assertIteratorDone, assertTransformerIteratorValueInstanceOf } from '../test/utilities';
 import { assert, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
-use(chaiAsPromised);
+use(require('chai-as-promised'));
 
 function* validPingResponse() {
     yield Buffer.from('d000', 'hex');
@@ -45,21 +44,21 @@ function* twoSplitPackets() {
 describe('MqttTransformer', function() {
     it('parses valid packets', async function() {
         const iterator = Readable.from(validPingResponse()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assertIteratorValueInstanceOf(iterator,  PingResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator,  PingResponsePacket);
         await assertIteratorDone(iterator);
     });
 
     it('parses multiple packets in the same chunk', async function() {
         const iterator = Readable.from(twoPackets()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assertIteratorValueInstanceOf(iterator, PingResponsePacket);
-        await assertIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
         await assertIteratorDone(iterator);
     });
 
     it('parses multiple packets in different chunks', async function() {
         const iterator = Readable.from(twoSplitPackets()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assertIteratorValueInstanceOf(iterator, PingResponsePacket);
-        await assertIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
         await assertIteratorDone(iterator);
     });
 
@@ -70,7 +69,7 @@ describe('MqttTransformer', function() {
 
     it('joins chunks on EOL', async function() {
         const iterator = Readable.from(splitPingResponse()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assertIteratorValueInstanceOf(iterator, PingResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
     });
 
     it('errors on invalid type', async function() {
