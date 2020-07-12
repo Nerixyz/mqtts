@@ -93,7 +93,9 @@ export class MqttClient<
             new TlsTransport({
                 host: options.host,
                 port: options.port,
-                enableTrace: options.enableTrace ?? false,
+                additionalOptions: {
+                    enableTrace: options.enableTrace,
+                }
             });
         this.transformer = options.transformer ?? new MqttTransformer<ReadMap>({
             debug: this.mqttDebug.extend('transformer'),
