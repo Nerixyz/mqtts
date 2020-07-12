@@ -1,8 +1,6 @@
-import { MqttPacket } from '../mqtt.packet';
-import { PacketTypes } from '../mqtt.constants';
+import { PacketWriteResult } from '../mqtt.packet';
 
-export class PingRequestPacket extends MqttPacket {
-    public constructor() {
-        super(PacketTypes.TYPE_PINGREQ);
-    }
+
+export function writePingRequestPacket(): PacketWriteResult {
+    return {};
 }

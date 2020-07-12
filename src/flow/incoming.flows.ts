@@ -1,38 +1,42 @@
-import { PingResponsePacket, PublishAckPacket, PublishCompletePacket, PublishReceivedPacket } from '../packets';
 import { MqttMessage } from '../mqtt.message';
 import { PacketFlowFunc } from './packet-flow';
 import { isPubRel } from '../mqtt.utilities';
+import { DefaultPacketReadResultMap } from '../packets/packet-reader';
+import { DefaultPacketWriteOptions, defaultWrite } from '../packets/packet-writer';
+import { PacketType } from '../mqtt.constants';
 
-export function incomingPingFlow(): PacketFlowFunc<void> {
-    return success => ({
-        start: () => {
-            success();
-            return new PingResponsePacket();
-        },
-    });
-}
+// PINGREQ is from client to server
+//
+// export function incomingPingFlow(): PacketFlowFunc<DefaultPacketReadResultMap, void> {
+//     return success => ({
+//         start: () => {
+//             success();
+//             return new PingResponsePacket();
+//         },
+//     });
+// }
 
-export function incomingPublishFlow(message: MqttMessage, identifier = -1): PacketFlowFunc<MqttMessage> {
+export function incomingPublishFlow(
+    message: MqttMessage,
+    identifier: number,
+): PacketFlowFunc<DefaultPacketReadResultMap, DefaultPacketWriteOptions, MqttMessage> {
     return success => ({
         start: () => {
             let packet = undefined;
             let emit = true;
             if (message.qosLevel === 1) {
-                packet = new PublishAckPacket();
+                packet = defaultWrite(PacketType.PubAck, { identifier });
             } else if (message.qosLevel === 2) {
-                packet = new PublishReceivedPacket();
+                packet = defaultWrite(PacketType.PubRec, { identifier });
                 emit = false;
             }
-            if (packet) packet.identifier = identifier;
             if (emit) success(message);
             return packet;
         },
         accept: packet => isPubRel(packet) && packet.identifier === identifier,
         next: () => {
             success(message);
-            const response = new PublishCompletePacket();
-            response.identifier = identifier;
-            return response;
+            return defaultWrite(PacketType.PubComp, { identifier });
         },
     });
 }

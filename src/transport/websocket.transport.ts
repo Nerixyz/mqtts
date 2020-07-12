@@ -11,8 +11,8 @@ export interface WebsocketTransportOptions {
 
 export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
     public duplex: Duplex;
-    private socket: WebSocket;
-    private socketStream: Duplex;
+    private socket?: WebSocket;
+    private socketStream?: Duplex;
     private readonly readable = new PassThrough();
     private readonly writable = new PassThrough();
 
@@ -29,6 +29,6 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
         this.socketStream.pipe(this.readable);
         this.writable.pipe(this.socketStream);
 
-        return new Promise(resolve => this.socket.on('open', resolve));
+        return new Promise(resolve => this.socket?.on('open', resolve));
     }
 }

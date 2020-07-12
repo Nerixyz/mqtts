@@ -2,7 +2,7 @@
   "compilerOptions": {
     "experimentalDecorators": true,
     "module": "commonjs",
-    "target": "es2018",
+    "target": "es2019",
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": "./",
@@ -12,7 +12,8 @@
     "alwaysStrict": true,
     "strictBindCallApply": true,
     "strictNullChecks": true,
-    "strictFunctionTypes": true
+    "strictFunctionTypes": true,
+    "strict": true
   },
   "exclude": [
     "node_modules",

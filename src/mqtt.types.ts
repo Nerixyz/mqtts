@@ -1,14 +1,25 @@
 import { ConnectRequestOptions } from './packets';
-import { MqttParser } from './mqtt.parser';
+import { MqttTransformer } from './mqtt.parser';
 import { Transport } from './transport';
 import { XOR } from 'ts-xor';
 import { MqttMessage } from './mqtt.message';
+import { DefaultPacketReadResultMap, PacketReadMap, PacketReadResultMap } from './packets/packet-reader';
+import {
+    DefaultPacketWriteOptions,
+    PacketWriteMap,
+    PacketWriteOptionsMap,
+    PacketWriter,
+} from './packets/packet-writer';
+import { TransformerFn, ValidatorFn } from './mqtt.listener';
 
-export type MqttClientConstructorOptions = XOR<
-    { transport: Transport<unknown> },
-    { host: string; port: number; enableTrace?: boolean }
-> & {
-    parser?: MqttParser;
+export type MqttClientConstructorOptions<
+    ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
+    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
+> = XOR<{ transport: Transport<unknown> }, { host: string; port: number; enableTrace?: boolean }> & {
+    readMap?: PacketReadMap<ReadMap>;
+    transformer?: MqttTransformer<ReadMap>;
+    writeMap?: PacketWriteMap<WriteMap>;
+    packetWriter?: PacketWriter<WriteMap>;
     autoReconnect?: boolean;
 };
 
@@ -34,18 +45,22 @@ export interface ListenerInfo<TIn, TOut> {
     onData: (data: TOut) => void | PromiseLike<void>;
 }
 
-export interface ListenOptions<TOut> {
+export interface ListenOptions<TOut, Params extends Record<string, string>> {
     topic: string;
-    validator?: null | ((data: MqttMessage) => boolean);
-    transformer?: (data: IncomingListenMessage<any>) => TOut;
+    validator?: ValidatorFn<Params>;
+    transformer?: TransformerFn<TOut, Params>;
 }
 
-export interface ListenSubscribeOptions<TOut> extends ListenOptions<TOut> {
+export interface ListenSubscribeOptions<TOut, Params extends Record<string, string>> extends ListenOptions<TOut, Params> {
     subscriptionInfo?: Partial<MqttSubscription>;
 }
 
-export interface IncomingListenMessage<T> extends MqttMessage {
+export interface IncomingListenMessage<T extends Record<string, string> = Record<string, string>> extends MqttMessage {
     params?: T;
 }
 
 export type Resolvable<T extends Record<string, unknown>> = (() => Promise<T>) | (() => T) | T;
+
+export interface IdentifierData {
+    identifier: number;
+}

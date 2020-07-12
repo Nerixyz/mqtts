@@ -1,16 +1,41 @@
-export const PacketTypes = {
-    TYPE_CONNECT: 1,
-    TYPE_CONNACK: 2,
-    TYPE_PUBLISH: 3,
-    TYPE_PUBACK: 4,
-    TYPE_PUBREC: 5,
-    TYPE_PUBREL: 6,
-    TYPE_PUBCOMP: 7,
-    TYPE_SUBSCRIBE: 8,
-    TYPE_SUBACK: 9,
-    TYPE_UNSUBSCRIBE: 10,
-    TYPE_UNSUBACK: 11,
-    TYPE_PINGREQ: 12,
-    TYPE_PINGRESP: 13,
-    TYPE_DISCONNECT: 14,
-};
+export enum PacketType {
+    Connect = 1,
+    ConnAck,
+    Publish,
+    PubAck,
+    PubRec,
+    PubRel,
+    PubComp,
+    Subscribe,
+    SubAck,
+    Unsubscribe,
+    UnsubAck,
+    PingReq,
+    PingResp,
+    Disconnect,
+}
+
+export interface EventMapping {
+    CONNECT: PacketType.Connect,
+    CONNACK: PacketType.ConnAck,
+    PUBLISH: PacketType.Publish,
+    PUBACK: PacketType.PubAck,
+    PUBREC: PacketType.PubRec,
+    PUBREL: PacketType.PubRel,
+    PUBCOMP: PacketType.PubComp,
+    SUBSCRIBE: PacketType.Subscribe,
+    SUBACK: PacketType.SubAck,
+    UNSUBSCRIBE: PacketType.Unsubscribe,
+    UNSUBACK: PacketType.UnsubAck,
+    PINGREQ: PacketType.PingReq,
+    PINGRESP: PacketType.PingResp,
+    DISCONNECT: PacketType.Disconnect,
+}
+
+const reverseMapping = Object.fromEntries(Object.entries(PacketType).map(([k, v]) => [v, k]));
+
+export type PacketName = keyof EventMapping;
+
+export function packetTypeToString(type: PacketType): PacketName {
+    return reverseMapping[type].toUpperCase() as PacketName;
+}

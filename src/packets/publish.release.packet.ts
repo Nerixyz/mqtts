@@ -1,14 +1,21 @@
-import { PacketTypes } from '../mqtt.constants';
-import { MqttPacket } from '../mqtt.packet';
+import { IdentifierPacket, PacketWriteResult } from '../mqtt.packet';
+import { PacketStream } from '../packet-stream';
+import { IdentifierData } from '../mqtt.types';
+import { expectRemainingLength } from '../mqtt.utilities';
 
-export class PublishReleasePacket extends MqttPacket {
-    get hasIdentifier(): boolean {
-        return true;
-    }
+export class PublishReleasePacket extends IdentifierPacket {}
 
-    public constructor(identifier?: number) {
-        super(PacketTypes.TYPE_PUBREL);
-        this.packetFlags = 2;
-        this.identifier = identifier ?? MqttPacket.generateIdentifier();
-    }
+export function writePublishReleasePacket(
+    stream: PacketStream,
+    options: PublishReleasedPacketOptions,
+): PacketWriteResult {
+    stream.writeWord(options.identifier);
+    return { flags: 2, identifier: options.identifier };
 }
+
+export function readPublishReleasePacket(stream: PacketStream, remaining: number): PublishReleasePacket {
+    expectRemainingLength(remaining, 2);
+    return new PublishReleasePacket(stream.readWord());
+}
+
+export type PublishReleasedPacketOptions = IdentifierData;

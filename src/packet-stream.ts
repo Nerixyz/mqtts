@@ -28,24 +28,27 @@ export class PacketStream {
 
     private _data: Buffer;
 
-    private _position: number;
+    private _position = 0;
 
     private constructor(data?: string, length?: number, buffer?: Buffer) {
         this._data = data ? Buffer.from(data) : length ? Buffer.alloc(length) : buffer ? buffer : Buffer.from([]);
         this.position = 0;
     }
 
-    public static fromLength(len: number) {
+    public static fromLength(len: number): PacketStream {
         return new PacketStream(undefined, len, undefined);
     }
-    public static fromBuffer(buf: Buffer) {
+    public static fromBuffer(buf: Buffer): PacketStream {
         return new PacketStream(undefined, undefined, buf);
     }
-    public static fromString(data: string) {
+    public static fromString(data: string): PacketStream {
         return new PacketStream(data, undefined, undefined);
     }
-    public static empty() {
+    public static empty(): PacketStream {
         return new PacketStream(undefined, undefined, undefined);
+    }
+    public static fromHex(hex: string): PacketStream {
+        return PacketStream.fromBuffer(Buffer.from(hex, 'hex'));
     }
 
     /**
@@ -99,6 +102,23 @@ export class PacketStream {
         return this.writeRawString(str);
     }
 
+    public writeRawAndLength(data: Buffer): this {
+        this.writeWord(data.byteLength);
+        return this.write(data);
+    }
+
+    public writeVariableByteInteger(value: number): this {
+        let digit = 0;
+        do {
+            digit = value % 128 | 0;
+            value = (value / 128) | 0;
+            if (value > 0) digit = digit | 0x80;
+
+            this.writeByte(digit);
+        } while (value > 0);
+        return this;
+    }
+
     // Read
     public read(len: number): Buffer {
         if (this.position > this.length || len > this.length - this.position) {
@@ -133,5 +153,24 @@ export class PacketStream {
 
     public readStringAsBuffer(): Buffer {
         return this.read(this.readWord());
+    }
+
+    public readVariableByteInteger(): number {
+        let value = 0;
+        let multiplier = 1;
+
+        let encodedByte;
+        do {
+            encodedByte = this.readByte();
+
+            value += (encodedByte & 0x7f) * multiplier;
+            if (multiplier > 128 * 128 * 128) {
+                throw new Error(
+                    `Invalid variable byte integer ${this.position}/${this.length}; currentValue: ${value}`,
+                );
+            }
+            multiplier *= 0x80;
+        } while ((encodedByte & 0x80) !== 0);
+        return value;
     }
 }

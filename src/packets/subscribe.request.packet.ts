@@ -1,52 +1,19 @@
-import { PacketTypes } from '../mqtt.constants';
 import { PacketStream } from '../packet-stream';
-import { MqttPacket } from '../mqtt.packet';
-import { InvalidDirectionError } from '../errors';
+import { PacketWriteResult } from '../mqtt.packet';
 
-export class SubscribeRequestPacket extends MqttPacket {
-    get hasIdentifier(): boolean {
-        return true;
-    }
+export interface SubscribePacketOptions {
+    subscriptions: Array<{topic: string; qos?: number}>;
+    identifier: number;
+}
 
-    public get qosLevel(): number {
-        return this._qosLevel;
+export function writeSubscribePacket(stream: PacketStream, options: SubscribePacketOptions): PacketWriteResult {
+    stream.writeWord(options.identifier);
+    if(options.subscriptions.length === 0)
+        throw new Error('The payload of a SUBSCRIBE packet MUST contain at least one Topic Filter / QoS pair');
+    for(const sub of options.subscriptions) {
+        if(sub.qos && sub.qos > 2)
+            throw new Error('invalid QoS');
+        stream.writeString(sub.topic).writeByte(sub.qos ?? 0);
     }
-
-    public set qosLevel(value: number) {
-        this.assertValidQosLevel(value);
-        this._qosLevel = value;
-    }
-    public get topic(): string {
-        return this._topic;
-    }
-
-    public set topic(value: string) {
-        this.assertValidString(value);
-        this._topic = value;
-    }
-
-    private _topic: string;
-    private _qosLevel: number;
-
-    public constructor(topic?: string, qosLevel = 1) {
-        super(PacketTypes.TYPE_SUBSCRIBE);
-        this.assertValidQosLevel(qosLevel);
-        this.assertValidString(topic ?? '');
-        this._topic = topic ?? '';
-        this._qosLevel = qosLevel;
-        this.packetFlags = 2;
-    }
-
-    public read(): void {
-        throw new InvalidDirectionError('read');
-    }
-
-    public write(stream: PacketStream): void {
-        const data = PacketStream.empty()
-            .writeString(this._topic)
-            .writeByte(this._qosLevel);
-        this.remainingPacketLength = data.length;
-        super.write(stream);
-        stream.write(data.data);
-    }
+    return {flags: 2, identifier: options.identifier};
 }

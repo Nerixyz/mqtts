@@ -1,42 +1,15 @@
-import { ListenerInfo, Resolvable } from './mqtt.types';
-import { MqttMessage } from './mqtt.message';
-import { MqttPacket } from './mqtt.packet';
+import { Resolvable } from './mqtt.types';
 import {
-    ConnectRequestPacket,
     ConnectResponsePacket,
-    DisconnectRequestPacket,
-    PingRequestPacket,
     PingResponsePacket,
     PublishAckPacket,
     PublishCompletePacket,
     PublishReceivedPacket,
     PublishReleasePacket,
     PublishRequestPacket,
-    SubscribeRequestPacket,
     SubscribeResponsePacket,
-    UnsubscribeRequestPacket,
     UnsubscribeResponsePacket,
 } from './packets';
-import { PacketTypes } from './mqtt.constants';
-
-export function topicListener<T>(options: {
-    topic: string;
-    transformer: (data: MqttMessage) => T | PromiseLike<T>;
-    validator?: (data: MqttMessage) => boolean | PromiseLike<boolean>;
-    onData: (data: T) => void | PromiseLike<void>;
-}): ListenerInfo<MqttMessage, T> {
-    return {
-        eventName: 'message',
-        validator: data => {
-            if (data.topic === options.topic) {
-                return options.validator ? options.validator(data) : true;
-            }
-            return false;
-        },
-        transformer: options.transformer,
-        onData: options.onData,
-    };
-}
 
 export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
     if (baseTopic.length === incomingTopic.length && baseTopic === incomingTopic) return true;
@@ -51,14 +24,23 @@ export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
     return true;
 }
 
+export function expectRemainingLength(length: number, expected?: number): void {
+    if(!expected) {
+        expected = 0;
+    }
+    if(length !== expected) {
+        throw new Error(`Expected remaining length to be ${expected} but got ${length}`);
+    }
+}
+
 export function removeUntil(input: string, char: string): string {
     return input.substring(Math.max(input.indexOf(char), 0));
 }
 
-export function extractParams(template: string, topic: string): object {
+export function extractParams(template: string, topic: string): Record<string, string> {
     const templateParts = template.split('/');
     const topicParts = topic.split('/');
-    const params: any = {};
+    const params: Record<string, string> = {};
     for (let i = 0; i < Math.min(templateParts.length, topicParts.length); i++) {
         if (templateParts[i].startsWith(':')) {
             params[templateParts[i].substring(1)] = topicParts[i];
@@ -72,80 +54,36 @@ export interface Resolvers<T> {
     reject: (error: Error) => void;
 }
 
-export const nullOrUndefined = (input: any) => input == undefined;
+export const nullOrUndefined = (input: unknown) => input == undefined;
 
-export function isPacket(target: any, type: number): boolean {
-    return target.packetType === type;
-}
-
-export const isConnect = (target: MqttPacket): target is ConnectRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_CONNECT);
-export const isConnAck = (target: MqttPacket): target is ConnectResponsePacket =>
-    isPacket(target, PacketTypes.TYPE_CONNACK);
-export const isPublish = (target: MqttPacket): target is PublishRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_PUBLISH);
-export const isPubAck = (target: MqttPacket): target is PublishAckPacket => isPacket(target, PacketTypes.TYPE_PUBACK);
-export const isPubRec = (target: MqttPacket): target is PublishReceivedPacket =>
-    isPacket(target, PacketTypes.TYPE_PUBREC);
-export const isPubRel = (target: MqttPacket): target is PublishReleasePacket =>
-    isPacket(target, PacketTypes.TYPE_PUBREL);
-export const isPubComp = (target: MqttPacket): target is PublishCompletePacket =>
-    isPacket(target, PacketTypes.TYPE_PUBCOMP);
-export const isSubscribe = (target: MqttPacket): target is SubscribeRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_SUBSCRIBE);
-export const isSubAck = (target: MqttPacket): target is SubscribeResponsePacket =>
-    isPacket(target, PacketTypes.TYPE_SUBACK);
-export const isUnsubscribe = (target: MqttPacket): target is UnsubscribeRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_UNSUBSCRIBE);
-export const isUnsubAck = (target: MqttPacket): target is UnsubscribeResponsePacket =>
-    isPacket(target, PacketTypes.TYPE_UNSUBACK);
-export const isPingReq = (target: MqttPacket): target is PingRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_PINGREQ);
-export const isPingResp = (target: MqttPacket): target is PingResponsePacket =>
-    isPacket(target, PacketTypes.TYPE_PINGRESP);
-export const isDisconnect = (target: MqttPacket): target is DisconnectRequestPacket =>
-    isPacket(target, PacketTypes.TYPE_DISCONNECT);
-
-/**
- * Some workaround for async requests:
- * This prevents the execution if there's already something in the buffer.
- * Note: if something fails, this will lock forever
- * @type {{unlock: () => void; resolve: null; lock: () => void; locked: boolean}}
- */
-export function createLock(): Lock {
-    return {
-        locked: false,
-        lock() {
-            this.locked = true;
-        },
-        unlock() {
-            this.locked = false;
-            if (this.resolver) {
-                this.resolver();
-                this.resolver = null;
-            }
-        },
-        resolver: null,
-        wait() {
-            if (this.locked) {
-                return new Promise<void>(resolve => {
-                    this.resolver = resolve;
-                });
-            } else {
-                return Promise.resolve();
-            }
-        },
-    };
-}
+export const isConnAck = (target: unknown): target is ConnectResponsePacket => target instanceof ConnectResponsePacket;
+export const isPublish = (target: unknown): target is PublishRequestPacket => target instanceof PublishRequestPacket;
+export const isPubAck = (target: unknown): target is PublishAckPacket => target instanceof PublishAckPacket;
+export const isPubRec = (target: unknown): target is PublishReceivedPacket => target instanceof PublishReceivedPacket;
+export const isPubRel = (target: unknown): target is PublishReleasePacket => target instanceof PublishReleasePacket;
+export const isPubComp = (target: unknown): target is PublishCompletePacket => target instanceof PublishCompletePacket;
+export const isSubAck = (target: unknown): target is SubscribeResponsePacket =>
+    target instanceof SubscribeResponsePacket;
+export const isUnsubAck = (target: unknown): target is UnsubscribeResponsePacket =>
+    target instanceof UnsubscribeResponsePacket;
+export const isPingResp = (target: unknown): target is PingResponsePacket => target instanceof PingResponsePacket;
 
 export async function resolve<T extends Record<string, unknown>>(resolvable: Resolvable<T>): Promise<T> {
     return typeof resolvable === 'object' ? resolvable : await resolvable();
 }
 
-export interface Lock {
-    resolver: Function | null;
-    locked: boolean;
-    lock: () => void;
-    unlock: () => void;
-    wait: () => Promise<void>;
+export function notUndefined<T>(value: T | undefined): value is T {
+    return typeof value !== 'undefined';
+}
+
+export function toBuffer(value: Buffer | string): Buffer {
+    return typeof value === 'string' ? Buffer.from(value) : value;
+}
+
+const paramRegex = /\/:[A-Za-z-_0-9]+/g;
+export function toMqttTopicFilter(paramString: string): [string, string?] {
+    if (paramString.match(paramRegex)) {
+        return [paramString.replace(paramRegex, '/+'), paramString];
+    }
+    return [paramString];
 }

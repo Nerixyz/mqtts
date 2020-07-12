@@ -1,7 +1,7 @@
 import { Duplex } from 'stream';
 
 export abstract class Transport<T> {
-    public duplex: Duplex;
+    public abstract duplex: Duplex;
 
     /**
      * This will be set by the MqttClient
