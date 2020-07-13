@@ -4,7 +4,7 @@ import EventEmitter = require('eventemitter3');
 import { PacketReadResultMap } from './packets/packet-reader';
 import { PacketWriteOptionsMap } from './packets/packet-writer';
 import { MqttMessage } from './mqtt.message';
-import { EventMapping } from './mqtt.constants';
+import { EventMapping, PacketType } from './mqtt.constants';
 
 export enum StateId {
     Fatal = -1,
@@ -20,7 +20,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     WriteMap extends PacketWriteOptionsMap> extends EventEmitter<{
     error: (e: Error) => void,
     warning: (e: Error) => void,
-    connect: () => void,
+    connect: (packet: ReadMap[PacketType.ConnAck]) => void,
     disconnect: (reason?: string) => void,
     message: (message: MqttMessage) => void,
 } & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }> {
@@ -47,7 +47,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     protected emitWarning = (e: Error) => this.emit('warning', e);
     protected emitError = (e: Error) => this.emit('error', e);
     protected emitDisconnect = (reason?: string) => this.emit('disconnect', reason);
-    protected emitConnect = () => this.emit('connect');
+    protected emitConnect = (packet: ReadMap[PacketType.ConnAck]) => this.emit('connect', packet);
     protected emitMessage = (message: MqttMessage) => this.emit('message', message);
 
     constructor(private sate: StateId = StateId.Created) {
