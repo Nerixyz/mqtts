@@ -42,14 +42,14 @@ import { PacketType, packetTypeToString } from './mqtt.constants';
 import debug = require('debug');
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
-import { toMqttTopicFilter } from './mqtt.utilities';
+import { createDefaultPacketLogger, toMqttTopicFilter } from './mqtt.utilities';
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
     WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
 > extends MqttBaseClient<ReadMap, WriteMap> {
     private mqttDebug = debug('mqtt:client');
-    private packetDebug = this.mqttDebug.extend('packet');
+    private receiveDebug = this.mqttDebug.extend('packet');
     private pingDebug = this.mqttDebug.extend('ping');
     // wrapper functions
     protected executeNextTick: ExecuteNextTick = process.nextTick;
@@ -108,19 +108,7 @@ export class MqttClient<
             options.packetWriter ??
             new PacketWriter<WriteMap>(
                 {
-                    logPacketWrite(
-                        packetType: PacketType,
-                        packetInfo: Record<string, string | number | boolean | undefined>,
-                    ) {
-                        if (packetType !== PacketType.PingReq && packetType !== PacketType.PingResp) {
-                            packetLogger(
-                                `Write ${packetTypeToString(packetType)} { ${Object.entries(packetInfo)
-                                    .filter(([, v]) => typeof v !== 'undefined')
-                                    .map(([k, v]) => `${k}: ${v}`)
-                                    .join(', ')}`,
-                            );
-                        }
-                    },
+                    logPacketWrite: createDefaultPacketLogger(packetLogger),
                 },
                 options.writeMap,
             );
@@ -216,7 +204,8 @@ export class MqttClient<
     public disconnect(force = false): Promise<void> {
         this.autoReconnect = false;
         if (!force) {
-            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>);
+            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>)
+                .then(() => this.setDisconnected());
         } else {
             this.setDisconnected('Forced Disconnect');
             return Promise.resolve();
@@ -328,7 +317,7 @@ export class MqttClient<
     }
 
     protected async handlePacket(packet: MqttParseResult<ReadMap, PacketType>): Promise<void> {
-        this.logPacket(packet, 'Received');
+        this.logReceivedPacket(packet);
         let forceCheckFlows = false;
         switch (packet.type) {
             case PacketType.ConnAck: {
@@ -380,10 +369,10 @@ export class MqttClient<
         }
     }
 
-    protected logPacket(packet: { type: PacketType; data: any }, action: string): void {
+    protected logReceivedPacket(packet: { type: PacketType; data: any }): void {
         if (packet.type !== PacketType.PingReq && packet.type !== PacketType.PingResp)
-            this.packetDebug(
-                `${action} ${packet.constructor.name}` +
+            this.receiveDebug(
+                `Received ${packet.data.constructor.name}` +
                     (packet.data.identifier ? ` id: ${packet.data.identifier}` : '') +
                     ('topic' in packet.data ? ` topic: ${packet.data.topic}` : ''),
             );

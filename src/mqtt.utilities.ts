@@ -10,6 +10,7 @@ import {
     SubscribeResponsePacket,
     UnsubscribeResponsePacket,
 } from './packets';
+import { PacketType, packetTypeToString } from './mqtt.constants';
 
 export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
     if (baseTopic.length === incomingTopic.length && baseTopic === incomingTopic) return true;
@@ -86,4 +87,38 @@ export function toMqttTopicFilter(paramString: string): [string, string?] {
         return [paramString.replace(paramRegex, '/+'), paramString];
     }
     return [paramString];
+}
+
+export function createDefaultPacketLogger(debug: (data: string) => void) {
+    return (
+        packetType: PacketType,
+        packetInfo: Record<string, string | number | boolean | undefined>,
+    ) => {
+        if (packetType !== PacketType.PingReq && packetType !== PacketType.PingResp) {
+            debug(
+                `Write ${packetTypeToString(packetType)} { ${Object.entries(packetInfo)
+                    .filter(([, v]) => typeof v !== 'undefined')
+                    .map(([k, v]) => `${k}: ${stringifyValue(v)}`)
+                    .join(', ')} }`,
+            );
+        }
+    }
+}
+
+function stringifyValue(value: unknown) {
+    if(typeof value === 'object') {
+        if(value === null) {
+            return '<null>';
+        } else if(Array.isArray(value)) {
+            return `<Array { len: ${value.length}}>`;
+        } else if(Buffer.isBuffer(value)) {
+            return `<Buffer { bytes: ${value.byteLength}}>`
+        } else if(value.constructor !== Object) {
+            return `<${value.constructor.name}>`;
+        } else {
+            return '{...}';
+        }
+    } else {
+        return value;
+    }
 }
