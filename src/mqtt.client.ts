@@ -310,7 +310,10 @@ export class MqttClient<
             // assume the defaults are used
             this.startFlow(outgoingPingFlow() as PacketFlowFunc<ReadMap, WriteMap, void>)
                 .then(() => this.pingDebug(`PingPong @ ${Date.now()}`))
-                .catch(() => this.pingDebug('PingPong failed.'));
+                .catch(e => {
+                    this.emitWarning(e);
+                    this.pingDebug(`PingPong failed. (${e.message})`);
+                });
         });
     }
 

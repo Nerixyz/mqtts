@@ -9,6 +9,7 @@ import { PublishReleasedPacketOptions, writePublishReleasePacket } from './publi
 import { PublishCompletePacketOptions, writePublishCompletePacket } from './publish.complete.packet';
 import { SubscribePacketOptions, writeSubscribePacket } from './subscribe.request.packet';
 import { UnsubscribePacketOptions, writeUnsubscribePacket } from './unsubscribe.request.packet';
+import { writePingRequestPacket } from './ping.request.packet';
 
 export interface PacketLogger {
     logPacketWrite: (packetType: PacketType, packetInfo: Record<string, string | number | boolean | undefined>) => void;
@@ -66,6 +67,7 @@ export const DefaultPacketWriteMap: PacketWriteMap<DefaultPacketWriteOptions> = 
     [PacketType.PubComp]: writePublishCompletePacket,
     [PacketType.Subscribe]: writeSubscribePacket,
     [PacketType.Unsubscribe]: writeUnsubscribePacket,
+    [PacketType.PingReq]: writePingRequestPacket,
 };
 
 export type PacketWriteMap<Options extends PacketWriteOptionsMap> = {
