@@ -42,7 +42,7 @@ import { PacketType, packetTypeToString } from './mqtt.constants';
 import debug = require('debug');
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
-import { createDefaultPacketLogger, toMqttTopicFilter } from './mqtt.utilities';
+import { createDefaultPacketLogger, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -97,10 +97,13 @@ export class MqttClient<
                     enableTrace: options.enableTrace,
                 },
             });
-        this.createTransformer = options.createTransformer ?? (() => new MqttTransformer<ReadMap>({
-            debug: this.mqttDebug.extend('transformer'),
-            mapping: options.readMap ?? (DefaultPacketReadMap as PacketReadMap<ReadMap>),
-        }));
+        this.createTransformer =
+            options.createTransformer ??
+            (() =>
+                new MqttTransformer<ReadMap>({
+                    debug: this.mqttDebug.extend('transformer'),
+                    mapping: options.readMap ?? (DefaultPacketReadMap as PacketReadMap<ReadMap>),
+                }));
         this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
         const packetLogger = this.mqttDebug.extend('write');
@@ -140,10 +143,8 @@ export class MqttClient<
                 objectMode: true,
             }),
             err => {
-                if(err)
-                    this.emitError(err);
-                if(!this.disconnected)
-                    this.setDisconnected('Pipeline finished');
+                if (err) this.emitError(err);
+                if (!this.disconnected) this.setDisconnected('Pipeline finished');
             },
         );
         await this.transport.connect();
@@ -204,8 +205,9 @@ export class MqttClient<
     public disconnect(force = false): Promise<void> {
         this.autoReconnect = false;
         if (!force) {
-            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>)
-                .then(() => this.setDisconnected());
+            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>).then(() =>
+                this.setDisconnected(),
+            );
         } else {
             this.setDisconnected('Forced Disconnect');
             return Promise.resolve();
@@ -371,11 +373,7 @@ export class MqttClient<
 
     protected logReceivedPacket(packet: { type: PacketType; data: any }): void {
         if (packet.type !== PacketType.PingReq && packet.type !== PacketType.PingResp)
-            this.receiveDebug(
-                `Received ${packet.data.constructor.name}` +
-                    (packet.data.identifier ? ` id: ${packet.data.identifier}` : '') +
-                    ('topic' in packet.data ? ` topic: ${packet.data.topic}` : ''),
-            );
+            this.receiveDebug(`Received ${stringifyObject(packet.data)}`);
     }
 
     protected reset(): void {

@@ -26,10 +26,10 @@ export function matchTopic(baseTopic: string, incomingTopic: string): boolean {
 }
 
 export function expectRemainingLength(length: number, expected?: number): void {
-    if(!expected) {
+    if (!expected) {
         expected = 0;
     }
-    if(length !== expected) {
+    if (length !== expected) {
         throw new Error(`Expected remaining length to be ${expected} but got ${length}`);
     }
 }
@@ -90,30 +90,29 @@ export function toMqttTopicFilter(paramString: string): [string, string?] {
 }
 
 export function createDefaultPacketLogger(debug: (data: string) => void) {
-    return (
-        packetType: PacketType,
-        packetInfo: Record<string, string | number | boolean | undefined>,
-    ) => {
+    return (packetType: PacketType, packetInfo: Record<string, string | number | boolean | undefined>) => {
         if (packetType !== PacketType.PingReq && packetType !== PacketType.PingResp) {
-            debug(
-                `Write ${packetTypeToString(packetType)} { ${Object.entries(packetInfo)
-                    .filter(([, v]) => typeof v !== 'undefined')
-                    .map(([k, v]) => `${k}: ${stringifyValue(v)}`)
-                    .join(', ')} }`,
-            );
+            debug(`Write ${packetTypeToString(packetType)} ${stringifyObject(packetInfo)}`);
         }
-    }
+    };
+}
+
+export function stringifyObject(obj: Record<string, unknown>) {
+    return `${obj.constructor === Object ? '' : `${obj.constructor.name} `}{${Object.entries(obj)
+        .filter(([, v]) => typeof v !== 'undefined')
+        .map(([k, v]) => `${k}: ${stringifyValue(v)}`)
+        .join(', ')}}`;
 }
 
 function stringifyValue(value: unknown) {
-    if(typeof value === 'object') {
-        if(value === null) {
+    if (typeof value === 'object') {
+        if (value === null) {
             return '<null>';
-        } else if(Array.isArray(value)) {
+        } else if (Array.isArray(value)) {
             return `<Array { len: ${value.length}}>`;
-        } else if(Buffer.isBuffer(value)) {
-            return `<Buffer { bytes: ${value.byteLength}}>`
-        } else if(value.constructor !== Object) {
+        } else if (Buffer.isBuffer(value)) {
+            return `<Buffer { bytes: ${value.byteLength}}>`;
+        } else if (value.constructor !== Object) {
             return `<${value.constructor.name}>`;
         } else {
             return '{...}';
