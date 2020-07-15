@@ -38,12 +38,6 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
                 this.duplex.uncork();
                 resolve();
             });
-            this.duplex.on('close', () => {
-                this.underlyingSocket.end();
-                this.underlyingSocket.destroy();
-                this.duplex.end();
-                this.duplex.destroy();
-            });
         });
     }
 }

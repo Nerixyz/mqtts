@@ -18,7 +18,7 @@
     "url": "https://github.com/Nerixyz/mqtts/issues"
   },
   "scripts": {
-    "test": "echo 0",
+    "test": "jest",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "prepare": "npm run build",
     "lint": "eslint --fix --ext .js,.ts src/**",
