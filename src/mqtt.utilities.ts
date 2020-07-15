@@ -104,7 +104,7 @@ export function stringifyObject(obj: Record<string, unknown>) {
         .join(', ')}}`;
 }
 
-function stringifyValue(value: unknown) {
+function stringifyValue(value: unknown): string {
     if (typeof value === 'object') {
         if (value === null) {
             return '<null>';
@@ -118,6 +118,6 @@ function stringifyValue(value: unknown) {
             return '{...}';
         }
     } else {
-        return value;
+        return typeof value === 'string' ? `"${value}"` : String(value);
     }
 }
