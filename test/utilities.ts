@@ -74,6 +74,7 @@ export async function assertTransportConnectsAndDisconnects(transport: Transport
     const firstPacket = await transport.duplex[Symbol.asyncIterator]().next();
     assert.strictEqual(firstPacket.done, false);
     assert(firstPacket.value);
+    await new Promise(resolve => transport.duplex.end(resolve));
     transport.duplex.destroy();
     assert.strictEqual(transport.duplex.destroyed, true);
     assert.strictEqual(transport.duplex.push('A'), false);

@@ -38,7 +38,7 @@ import {
     PacketWriteOptionsMap,
     PacketWriter,
 } from './packets';
-import { PacketType, packetTypeToString } from './mqtt.constants';
+import { PacketType } from './mqtt.constants';
 import debug = require('debug');
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
@@ -202,15 +202,14 @@ export class MqttClient<
         return this.startFlow(outgoingUnsubscribeFlow(subscription) as PacketFlowFunc<ReadMap, WriteMap, void>);
     }
 
-    public disconnect(force = false): Promise<void> {
+    public async disconnect(force = false): Promise<void> {
         this.autoReconnect = false;
         if (!force) {
-            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>).then(() =>
-                this.setDisconnected(),
+            return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>).then(async () =>
+                await this.setDisconnected(),
             );
         } else {
-            this.setDisconnected('Forced Disconnect');
-            return Promise.resolve();
+            await this.setDisconnected('Forced Disconnect');
         }
     }
 
@@ -336,7 +335,7 @@ export class MqttClient<
                 } else {
                     this.setFatal();
                     this.emitError(new ConnectError(connack.data.errorName));
-                    this.setDisconnected(connack.data.errorName);
+                    this.setDisconnected(connack.data.errorName).catch(e => this.emitWarning(e));
                 }
                 break;
             }
@@ -363,7 +362,7 @@ export class MqttClient<
             }
             case PacketType.Disconnect: {
                 // ? this.disconnect();
-                this.setDisconnected('disconnect packet received');
+                this.setDisconnected('disconnect packet received').catch(e => this.emitWarning(e));
                 break;
             }
             default:
@@ -396,12 +395,17 @@ export class MqttClient<
         if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
-    protected setDisconnected(reason?: string): void {
+    protected async setDisconnected(reason?: string): Promise<void> {
         const willReconnect = !this.disconnected && this.ready && !this.connecting && this.autoReconnect;
         if (this.connecting) this.rejectConnectPromise(new Error('Disconnected'));
         super.setDisconnected();
         this.emitDisconnect(reason);
-        !this.transport.duplex.destroyed && this.transport.duplex.destroy();
+        if(!this.transport.duplex.destroyed) {
+            await new Promise(resolve => this.transport.duplex.end(resolve));
+            if(!this.transport.duplex.writableEnded) {
+                this.transport.duplex.destroy(new Error('force destroy'));
+            }
+        }
         this.stopExecuting(this.keepAliveTimer);
         this.reset();
         if (willReconnect) {
