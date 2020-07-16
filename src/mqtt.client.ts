@@ -328,7 +328,7 @@ export class MqttClient<
                 const connack = packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.ConnAck>;
                 if (connack.data.isSuccess) {
                     this.setReady();
-                    this.emitConnect(connack);
+                    this.emitConnect(connack.data);
                     if (this.connectOptions?.keepAlive) {
                         this.updateKeepAlive(this.connectOptions.keepAlive);
                     }
