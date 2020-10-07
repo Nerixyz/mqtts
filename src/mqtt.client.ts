@@ -25,24 +25,25 @@ import {
 } from './flow';
 import { MqttParseResult, MqttTransformer } from './mqtt.parser';
 import { TlsTransport, Transport } from './transport';
-import { ConnectRequestOptions, SubscribeReturnCode } from './packets';
+import {
+    ConnectRequestOptions, ConnectResponsePacket,
+    DefaultPacketReadMap,
+    DefaultPacketReadResultMap,
+    DefaultPacketWriteOptions,
+    PacketReadMap,
+    PacketReadResultMap,
+    PacketWriteOptionsMap,
+    PacketWriter, PublishRequestPacket,
+    SubscribeReturnCode,
+} from './packets';
 import { MqttMessageOutgoing } from './mqtt.message';
 import { ConnectError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
-import {
-    DefaultPacketReadMap,
-    DefaultPacketReadResultMap,
-    PacketReadMap,
-    PacketReadResultMap,
-    DefaultPacketWriteOptions,
-    PacketWriteOptionsMap,
-    PacketWriter,
-} from './packets';
 import { PacketType } from './mqtt.constants';
-import debug = require('debug');
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { createDefaultPacketLogger, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
+import debug = require('debug');
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -323,45 +324,17 @@ export class MqttClient<
     protected async handlePacket(packet: MqttParseResult<ReadMap, PacketType>): Promise<void> {
         this.logReceivedPacket(packet);
         let forceCheckFlows = false;
+        // The following "type assertions" are valid as clients extending MqttClient have to implement their own methods
         switch (packet.type) {
             case PacketType.ConnAck: {
-                const connack = packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.ConnAck>;
-                if (connack.data.isSuccess) {
-                    this.setReady();
-                    this.emitConnect(connack.data);
-                    if (this.connectOptions?.keepAlive) {
-                        this.updateKeepAlive(this.connectOptions.keepAlive);
-                    }
-                } else {
-                    this.setFatal();
-                    this.emitError(new ConnectError(connack.data.errorName));
-                    this.setDisconnected(connack.data.errorName).catch(e => this.emitWarning(e));
-                }
+                this.onConnAck((packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.ConnAck>).data);
                 break;
             }
             case PacketType.Publish: {
-                const pub = (packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.Publish>).data;
-                this.startFlow(
-                    incomingPublishFlow(
-                        {
-                            topic: pub.topic,
-                            payload: pub.payload,
-                            qosLevel: pub.qos,
-                            retained: pub.retain,
-                            duplicate: pub.duplicate,
-                        },
-                        pub.identifier ?? undefined,
-                    ) as PacketFlowFunc<ReadMap, WriteMap, any>,
-                )
-                    .then(async m => {
-                        this.emitMessage(m);
-                        await this.messageListener.handleMessage(m);
-                    })
-                    .catch(e => this.emitWarning(e));
+                this.onPublish((packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.Publish>).data);
                 break;
             }
             case PacketType.Disconnect: {
-                // ? this.disconnect();
                 this.setDisconnected('disconnect packet received').catch(e => this.emitWarning(e));
                 break;
             }
@@ -371,6 +344,40 @@ export class MqttClient<
         if (!this.continueFlows(packet) && forceCheckFlows) {
             this.emitWarning(new UnexpectedPacketError(packet.constructor.name));
         }
+    }
+
+    protected onConnAck(connAck: ConnectResponsePacket) {
+        if (connAck.isSuccess) {
+            this.setReady();
+            this.emitConnect(connAck);
+            if (this.connectOptions?.keepAlive) {
+                this.updateKeepAlive(this.connectOptions.keepAlive);
+            }
+        } else {
+            this.setFatal();
+            this.emitError(new ConnectError(connAck.errorName));
+            this.setDisconnected(connAck.errorName).catch(e => this.emitWarning(e));
+        }
+    }
+
+    protected onPublish(publish: PublishRequestPacket) {
+        this.startFlow(
+            incomingPublishFlow(
+                {
+                    topic: publish.topic,
+                    payload: publish.payload,
+                    qosLevel: publish.qos,
+                    retained: publish.retain,
+                    duplicate: publish.duplicate,
+                },
+                publish.identifier ?? undefined,
+            ) as PacketFlowFunc<ReadMap, WriteMap, any>,
+        )
+            .then(async m => {
+                this.emitMessage(m);
+                await this.messageListener.handleMessage(m);
+            })
+            .catch(e => this.emitWarning(e));
     }
 
     protected logReceivedPacket(packet: { type: PacketType; data: any }): void {
