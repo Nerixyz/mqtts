@@ -406,7 +406,7 @@ export class MqttClient<
         const willReconnect = !this.disconnected && this.ready && !this.connecting && this.autoReconnect;
         if (this.connecting) this.rejectConnectPromise(new Error('Disconnected'));
         super.setDisconnected();
-        this.emitDisconnect(reason);
+        this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
         if(!this.transport.duplex.destroyed) {
             await new Promise(resolve => this.transport.duplex.end(resolve));
             if(!this.transport.duplex.writableEnded) {
