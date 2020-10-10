@@ -1,4 +1,4 @@
-import { PacketType } from './mqtt.constants';
+import { PacketType, packetTypeToString } from './mqtt.constants';
 import { PacketStream } from './packet-stream';
 import { EndOfStreamError, MalformedPacketError, UnexpectedPacketError } from './errors';
 import { Transform, TransformCallback } from 'stream';
@@ -53,7 +53,7 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
             const packetFn = this.mapping[type];
             if (!packetFn) {
                 callback(
-                    new UnexpectedPacketError(`No packet found for ${type}; @${stream.position}/${stream.length}`),
+                    new UnexpectedPacketError(`No packet found for ${type}; @${stream.position - 1} len: ${stream.length}`),
                 );
                 return;
             }
@@ -80,11 +80,7 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
                 } else {
                     callback(
                         new MalformedPacketError(
-                            `Error in parser (type: ${type}): 
-                        ${e.stack}; 
-                        exiting; 
-                        resetting;
-                        stream: ${stream.data.toString('base64')}`,
+                            `Error in parser (type: ${packetTypeToString(type)}): ${e.message || e} - stream: ${stream.data.toString('base64')}`,
                         ),
                     );
                     return;
