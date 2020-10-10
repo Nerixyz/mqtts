@@ -39,7 +39,7 @@ import {
 import { MqttMessageOutgoing } from './mqtt.message';
 import { ConnectError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
-import { PacketType } from './mqtt.constants';
+import { PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { createDefaultPacketLogger, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
@@ -342,7 +342,7 @@ export class MqttClient<
                 forceCheckFlows = true;
         }
         if (!this.continueFlows(packet) && forceCheckFlows) {
-            this.emitWarning(new UnexpectedPacketError(packet.constructor.name));
+            this.emitWarning(new UnexpectedPacketError(packetTypeToString(packet.type)));
         }
     }
 
