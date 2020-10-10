@@ -5,7 +5,7 @@ import {
     SubscribeResponsePacket,
     UnexpectedPacketError,
 } from './index';
-import {  Readable } from 'stream';
+import { Readable } from 'stream';
 import { assertIteratorDone, assertTransformerIteratorValueInstanceOf } from '../test/utilities';
 import { assert, use } from 'chai';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -42,44 +42,48 @@ function* twoSplitPackets() {
     yield Buffer.from('000100', 'hex');
 }
 
-describe('MqttTransformer', function() {
-    it('parses valid packets', async function() {
+describe('MqttTransformer', function () {
+    it('parses valid packets', async function () {
         const iterator = Readable.from(validPingResponse()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assertTransformerIteratorValueInstanceOf(iterator,  PingResponsePacket);
+        await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
         await assertIteratorDone(iterator);
     });
 
-    it('parses multiple packets in the same chunk', async function() {
+    it('parses multiple packets in the same chunk', async function () {
         const iterator = Readable.from(twoPackets()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
         await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
         await assertTransformerIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
         await assertIteratorDone(iterator);
     });
 
-    it('parses multiple packets in different chunks', async function() {
+    it('parses multiple packets in different chunks', async function () {
         const iterator = Readable.from(twoSplitPackets()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
         await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
         await assertTransformerIteratorValueInstanceOf(iterator, SubscribeResponsePacket);
         await assertIteratorDone(iterator);
     });
 
-    it('is empty on EOL', async function() {
+    it('is empty on EOL', async function () {
         const iterator = Readable.from(incompletePingResponse()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
         await assertIteratorDone(iterator);
     });
 
-    it('joins chunks on EOL', async function() {
+    it('joins chunks on EOL', async function () {
         const iterator = Readable.from(splitPingResponse()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
         await assertTransformerIteratorValueInstanceOf(iterator, PingResponsePacket);
     });
 
-    it('errors on invalid type', async function() {
+    it('errors on invalid type', async function () {
         const iterator = Readable.from(invalidType()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assert.isRejected(iterator.next(), UnexpectedPacketError);
+        await assert.isRejected(iterator.next(), UnexpectedPacketError, 'No packet found for 15; @0 len: 1');
     });
 
-    it('errors on malformed packet', async function() {
+    it('errors on malformed packet', async function () {
         const iterator = Readable.from(malformedPacket()).pipe(new MqttTransformer())[Symbol.asyncIterator]();
-        await assert.isRejected(iterator.next(), MalformedPacketError);
+        await assert.isRejected(
+            iterator.next(),
+            MalformedPacketError,
+            'Error in parser (type: SUBACK): Received invalid return codes - stream: kAMAAQM=',
+        );
     });
 });
