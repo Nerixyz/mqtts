@@ -109,6 +109,7 @@ export class MqttClient {
             new TlsTransport({
                 url: options.url,
                 enableTrace: options.enableTrace ?? false,
+                proxyOptions: options.proxyOptions,
             });
 
         try {

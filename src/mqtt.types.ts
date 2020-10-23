@@ -1,12 +1,12 @@
 import { ConnectRequestOptions } from './packets';
 import { MqttParser } from './mqtt.parser';
-import { Transport } from './transport';
+import { Transport, TlsTransportProxyOptions } from './transport';
 import { XOR } from 'ts-xor';
 import { MqttMessage } from './mqtt.message';
 
 export type MqttClientConstructorOptions = XOR<
     { transport: Transport<unknown> },
-    { url: string; enableTrace?: boolean }
+    { url: string; enableTrace?: boolean; proxyOptions?: TlsTransportProxyOptions }
 > & {
     parser?: MqttParser;
     autoReconnect?: boolean;
