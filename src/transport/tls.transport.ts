@@ -1,18 +1,36 @@
 import { Transport } from './transport';
 import { TLSSocket, connect } from 'tls';
 import * as URL from 'url';
+import { SocksClient, SocksProxy } from 'socks';
 
-export class TlsTransport extends Transport<{ url: string; enableTrace?: boolean }> {
+export class TlsTransport extends Transport<{
+    url: string; enableTrace?: boolean; proxyOptions?: TlsTransportProxyOptions
+}> {
     private socket: TLSSocket;
     send(data: Buffer): void {
         this.socket.write(data);
     }
 
-    connect(): void {
+    async connect(): Promise<any> {
         const url = URL.parse(this.options.url);
+        const host = url.hostname ?? '';
+        const port = Number(url.port);
+        let proxySocket;
+        if (this.options.proxyOptions !== undefined) {
+            const info = await SocksClient.createConnection({
+                proxy: this.options.proxyOptions,
+                command: 'connect',
+                destination: {
+                    host,
+                    port,
+                }
+            });
+            proxySocket = info.socket;
+        }
         this.socket = connect({
-            host: url.hostname ?? '',
-            port: Number(url.port),
+            socket: proxySocket,
+            host,
+            port,
             enableTrace: !!this.options.enableTrace,
             timeout: 0,
         });
@@ -29,3 +47,5 @@ export class TlsTransport extends Transport<{ url: string; enableTrace?: boolean
         this.socket.end();
     }
 }
+
+export type TlsTransportProxyOptions = SocksProxy;
