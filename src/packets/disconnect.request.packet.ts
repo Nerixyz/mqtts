@@ -1,8 +1,7 @@
-import { MqttPacket } from '../mqtt.packet';
-import { PacketTypes } from '../mqtt.constants';
+import { PacketWriteResult } from '../mqtt.packet';
 
-export class DisconnectRequestPacket extends MqttPacket {
-    public constructor() {
-        super(PacketTypes.TYPE_DISCONNECT);
-    }
+
+export function writeDisconnectRequestPacket(): PacketWriteResult {
+    return {};
 }
+

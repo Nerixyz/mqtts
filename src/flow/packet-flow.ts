@@ -1,19 +1,25 @@
-import { MqttPacket } from '../mqtt.packet';
 import { Resolvers } from '../mqtt.utilities';
+import { PacketType } from '../mqtt.constants';
+import { DefaultPacketReadResultMap, PacketReadResultMap } from '../packets/packet-reader';
+import { DefaultPacketWriteOptions, PacketWriteOptionsMap, WriteData } from '../packets/packet-writer';
 
-export type PacketFlowFunc<T> = (
-    success: (value: T) => void,
+export type PacketFlowFunc<ReadMap extends PacketReadResultMap, WriteMap extends PacketWriteOptionsMap, TResult, TPacket = unknown> = (
+    success: (value: TResult) => void,
     error: (error: Error | string) => void,
-) => PacketFlowCallbacks;
+) => PacketFlowCallbacks<ReadMap, WriteMap, TPacket>;
 
-export interface PacketFlowCallbacks {
-    start(): MqttPacket | void | undefined | null;
-    accept?(packet: MqttPacket): boolean | undefined | null;
-    next?(last: MqttPacket): MqttPacket | void | undefined | null;
+export interface PacketFlowCallbacks<
+    ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
+    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
+    TPacket = unknown> {
+    start(): WriteData<WriteMap, PacketType> | void | undefined | null;
+    accept?(packet: TPacket): boolean | undefined;
+    next?(last: TPacket): WriteData<WriteMap, PacketType> | void | undefined;
 }
 
 export interface PacketFlowData<T> {
     resolvers: Resolvers<T>;
     callbacks: PacketFlowCallbacks;
     finished: boolean;
+    flowId: unknown;
 }

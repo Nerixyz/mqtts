@@ -1,51 +1,43 @@
 import { Transport } from './transport';
-import { TLSSocket, connect } from 'tls';
-import * as URL from 'url';
-import { SocksClient, SocksProxy } from 'socks';
+import { ConnectionOptions, TLSSocket } from 'tls';
+import { Socket } from 'net';
 
-export class TlsTransport extends Transport<{
-    url: string; enableTrace?: boolean; proxyOptions?: TlsTransportProxyOptions
-}> {
-    private socket: TLSSocket;
-    send(data: Buffer): void {
-        this.socket.write(data);
+export interface TlsTransportOptions {
+    host: string;
+    port: number;
+    additionalOptions?: ConnectionOptions;
+}
+export class TlsTransport extends Transport<TlsTransportOptions> {
+    // these will be set on the constructor
+    public duplex!: TLSSocket;
+    private underlyingSocket!: Socket;
+
+    constructor(options: TlsTransportOptions) {
+        super(options);
+        this.reset();
     }
 
-    async connect(): Promise<any> {
-        const url = URL.parse(this.options.url);
-        const host = url.hostname ?? '';
-        const port = Number(url.port);
-        let proxySocket;
-        if (this.options.proxyOptions !== undefined) {
-            const info = await SocksClient.createConnection({
-                proxy: this.options.proxyOptions,
-                command: 'connect',
-                destination: {
-                    host,
-                    port,
-                }
+    reset() {
+        this.underlyingSocket = new Socket();
+        this.underlyingSocket.setNoDelay(true);
+        this.duplex = new TLSSocket(this.underlyingSocket);
+        this.duplex.setNoDelay(true);
+
+        // buffer packets until connect()
+        this.duplex.cork();
+    }
+
+    connect(): Promise<void> {
+        return new Promise(resolve => {
+            this.underlyingSocket.connect(this.options.port, this.options.host);
+            this.duplex.connect({
+                ...this.options.additionalOptions,
+                host: this.options.host,
+                port: this.options.port,
+            }, () => {
+                this.duplex.uncork();
+                resolve();
             });
-            proxySocket = info.socket;
-        }
-        this.socket = connect({
-            socket: proxySocket,
-            host,
-            port,
-            enableTrace: !!this.options.enableTrace,
-            timeout: 0,
         });
-        this.socket.on('error', e => this.callbacks.error(e));
-        this.socket.on('end', () => this.callbacks.disconnect());
-        this.socket.on('close', () => this.callbacks.disconnect());
-        this.socket.on('secureConnect', () => this.callbacks.connect());
-        this.socket.on('timeout', () => this.callbacks.disconnect());
-        this.socket.on('data', res => this.callbacks.data(res));
-    }
-
-    disconnect(): void {
-        this.socket.removeAllListeners('close');
-        this.socket.end();
     }
 }
-
-export type TlsTransportProxyOptions = SocksProxy;

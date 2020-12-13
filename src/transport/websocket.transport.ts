@@ -1,22 +1,38 @@
 import { Transport } from './transport';
-import WebSocket = require('ws');
+import * as WebSocket from 'ws';
+import { ClientOptions } from 'ws';
+import { Duplex, PassThrough } from 'stream';
+import duplexify = require('duplexify');
 
-export class WebsocketTransport extends Transport<{ url: string; additionalOptions?: WebSocket.ClientOptions }> {
-    private socket: WebSocket;
+export interface WebsocketTransportOptions {
+    url: string;
+    additionalOptions?: ClientOptions;
+}
 
-    connect(): void {
+export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
+    // this will be set on the constructor
+    public duplex!: Duplex;
+    private socket?: WebSocket;
+    private socketStream?: Duplex;
+    private readonly readable = new PassThrough();
+    private readonly writable = new PassThrough();
+
+    constructor(options: WebsocketTransportOptions) {
+        super(options);
+        this.reset();
+    }
+
+    reset() {
+        this.duplex = duplexify(this.writable, this.readable, {objectMode: true});
+    }
+
+
+    connect(): Promise<void> {
         this.socket = new WebSocket(this.options.url, this.options.additionalOptions);
-        this.socket.on('open', () => this.callbacks.connect());
-        this.socket.on('message', (data: Buffer) => this.callbacks.data(data));
-        this.socket.on('close', () => this.callbacks.disconnect());
-        this.socket.on('error', (e: Error) => this.callbacks.error(e));
-    }
+        this.socketStream = WebSocket.createWebSocketStream(this.socket, {objectMode: true});
+        this.socketStream.pipe(this.readable);
+        this.writable.pipe(this.socketStream);
 
-    send(data: Buffer): void {
-        this.socket.send(data);
-    }
-
-    disconnect(): void {
-        if (![this.socket.CLOSED, this.socket.CLOSING].includes(this.socket.readyState)) this.socket.close();
+        return new Promise(resolve => this.socket?.on('open', resolve));
     }
 }

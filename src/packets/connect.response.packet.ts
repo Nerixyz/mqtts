@@ -1,62 +1,36 @@
-import { MqttPacket } from '../mqtt.packet';
 import { PacketStream } from '../packet-stream';
-import { PacketTypes } from '../mqtt.constants';
-import { InvalidDirectionError } from '../errors';
+import { expectRemainingLength } from '../mqtt.utilities';
 
-export class ConnectResponsePacket extends MqttPacket {
-    public get payload(): Buffer {
-        return this._payload;
+export class ConnectResponsePacket {
+    get sessionPresent(): boolean {
+        return !!(this.ackFlags & 0x1);
     }
+    get isSuccess(): boolean {
+        return this.returnCode === ConnectReturnCode.Accepted;
+    }
+    get errorName(): keyof typeof ConnectReturnCode | string {
+        return Object.entries(ConnectReturnCode).find(([, v]) => v === this.returnCode)?.[0] ?? 'Unknown';
+    }
+    constructor(public ackFlags: number, public returnCode: ConnectReturnCode) {}
+}
 
-    public static readonly returnCodes = [
-        'Connection accepted',
-        'Unacceptable protocol version',
-        'Identifier rejected',
-        'Server unavailable',
-        'Bad user name or password',
-        'Not authorized',
-    ];
+export function readConnectResponsePacket(stream: PacketStream, remaining: number): ConnectResponsePacket {
+    expectRemainingLength(remaining, 2);
+    const ack = stream.readByte();
+    const returnCode = stream.readByte();
+    if(ack > 1) {
+        throw new Error('Invalid ack');
+    } else if(returnCode > 5) {
+        throw new Error('Invalid return code');
+    }
+    return new ConnectResponsePacket(ack, returnCode as ConnectReturnCode);
+}
 
-    public get returnCode(): number {
-        return this._returnCode;
-    }
-    public get flags(): number {
-        return this._flags;
-    }
-    public get isSuccess(): boolean {
-        return this.returnCode === 0;
-    }
-    public get isError(): boolean {
-        return this.returnCode > 0;
-    }
-    public get errorName(): string {
-        return ConnectResponsePacket.returnCodes[
-            Math.min(this.returnCode, ConnectResponsePacket.returnCodes.length - 1)
-        ];
-    }
-    private _flags: number;
-    private _returnCode: number;
-
-    private _payload: Buffer;
-
-    public constructor() {
-        super(PacketTypes.TYPE_CONNACK);
-    }
-
-    public read(stream: PacketStream): void {
-        super.read(stream);
-
-        this._flags = stream.readByte();
-        this._returnCode = stream.readByte();
-        /**
-         *  NOT IN MQTT 3.1.1!
-         */
-        if (this.remainingPacketLength - 2 > 0) {
-            this._payload = stream.readStringAsBuffer();
-        }
-    }
-
-    write(): void {
-        throw new InvalidDirectionError('write');
-    }
+export enum ConnectReturnCode {
+    Accepted,
+    UnacceptableProtocolVersion,
+    IdentifierRejected,
+    ServerUnavailable,
+    BadUsernameOrPassword,
+    NotAuthorized,
 }

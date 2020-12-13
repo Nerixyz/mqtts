@@ -1,19 +1,13 @@
+import { Duplex } from 'stream';
+
 export abstract class Transport<T> {
+    public abstract duplex: Duplex;
+
     /**
      * This will be set by the MqttClient
      */
-    public callbacks: TransportConnectOptions;
     public constructor(protected options: T) {}
 
-    public abstract connect(): void;
-    public abstract disconnect(): void;
-
-    public abstract send(data: Buffer): void;
-}
-
-export interface TransportConnectOptions {
-    disconnect(data?: Error): void;
-    connect(): void;
-    data(data: Buffer): void;
-    error(e: Error): void;
+    public abstract connect(): Promise<void>;
+    public abstract reset(): void;
 }

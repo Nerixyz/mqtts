@@ -1,12 +1,10 @@
-import { PacketTypes } from '../mqtt.constants';
-import { MqttPacket } from '../mqtt.packet';
+import { IdentifierPacket } from '../mqtt.packet';
+import { PacketStream } from '../packet-stream';
+import { expectRemainingLength } from '../mqtt.utilities';
 
-export class UnsubscribeResponsePacket extends MqttPacket {
-    get hasIdentifier(): boolean {
-        return true;
-    }
+export class UnsubscribeResponsePacket extends IdentifierPacket {}
 
-    public constructor() {
-        super(PacketTypes.TYPE_UNSUBACK);
-    }
+export function readUnsubscribePacket(stream: PacketStream, remaining: number): UnsubscribeResponsePacket {
+    expectRemainingLength(remaining, 2);
+    return new UnsubscribeResponsePacket(stream.readWord());
 }
