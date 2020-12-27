@@ -134,9 +134,9 @@ describe('MqttClient', function() {
                 transport,
             });
             const flow = client.startFlow(() => ({
-                accept() {return undefined},
-                next() {},
-                start() {}
+                accept: () => undefined,
+                next: () => undefined,
+                start: () => undefined,
             }));
             assert.isTrue(client.stopFlow(flow.flowId));
             await assert.isRejected(flow, FlowStoppedError);
