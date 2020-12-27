@@ -121,3 +121,20 @@ function stringifyValue(value: unknown): string {
         return typeof value === 'string' ? `"${value}"` : String(value);
     }
 }
+
+export function createFlowCounter() {
+    if(!globalThis.BigInt) {
+        let count = 0;
+        return {
+            next() {
+                return ++count;
+            },
+        }
+    }
+    let count = BigInt(0);
+    return {
+        next() {
+            return count += BigInt(1);
+        },
+    }
+}

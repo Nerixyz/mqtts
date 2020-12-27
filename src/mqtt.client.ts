@@ -37,12 +37,12 @@ import {
     SubscribeReturnCode,
 } from './packets';
 import { MqttMessageOutgoing } from './mqtt.message';
-import { ConnectError, UnexpectedPacketError } from './errors';
+import { ConnectError, FlowStoppedError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
 import { PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
-import { createDefaultPacketLogger, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
+import { createDefaultPacketLogger, createFlowCounter, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
 import debug = require('debug');
 
 export class MqttClient<
@@ -57,6 +57,7 @@ export class MqttClient<
     protected executePeriodically: ExecutePeriodically = (ms, cb) => setInterval(cb, ms);
     protected stopExecuting: StopExecuting = clearInterval;
     protected executeDelayed: ExecuteDelayed = (ms, cb) => setTimeout(cb, ms);
+    protected flowCounter = createFlowCounter();
 
     get keepAlive(): number {
         return this.connectOptions?.keepAlive ?? 0;
@@ -159,7 +160,7 @@ export class MqttClient<
     ): Promise<any> {
         let promise;
         if (noNewPromise) {
-            const flow = this.activeFlows.find(x => x.flowId === lastFlow);
+            const flow = this.activeFlows.find(x => x.flowFunc === lastFlow);
             if (!flow) {
                 promise = Promise.reject(new Error('Could not find flow'));
             } else {
@@ -250,8 +251,9 @@ export class MqttClient<
         });
     }
 
-    public startFlow<T>(flow: PacketFlowFunc<ReadMap, WriteMap, T>): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
+    public startFlow<T>(flow: PacketFlowFunc<ReadMap, WriteMap, T>): Promise<T> & { flowId: bigint | number } {
+        const flowId = this.flowCounter.next();
+        const promise = new Promise<T>((resolve, reject) => {
             const data: PacketFlowData<T> = {
                 resolvers: { resolve, reject },
                 finished: false,
@@ -265,7 +267,8 @@ export class MqttClient<
                         reject(err);
                     },
                 ),
-                flowId: flow,
+                flowId,
+                flowFunc: flow
             };
             const first = data.callbacks.start();
             if (first) this.sendData(this.writer.write(first.type, first.options));
@@ -274,6 +277,20 @@ export class MqttClient<
                 this.activeFlows.push(data);
             }
         });
+        (promise as any).flowId = flowId;
+        return promise as Promise<T> & {flowId: bigint | number};
+    }
+
+    public stopFlow(flowId: bigint | number): boolean {
+        const flow = this.activeFlows.find(f => f.flowId);
+        if(!flow) return false;
+
+        this.activeFlows = this.activeFlows.filter(f => f.flowId !== flowId);
+
+        flow.finished = true;
+        flow.resolvers.reject(new FlowStoppedError());
+
+        return true;
     }
 
     /**

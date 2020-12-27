@@ -21,5 +21,6 @@ export interface PacketFlowData<T> {
     resolvers: Resolvers<T>;
     callbacks: PacketFlowCallbacks;
     finished: boolean;
-    flowId: unknown;
+    flowFunc: unknown;
+    flowId: bigint | number;
 }

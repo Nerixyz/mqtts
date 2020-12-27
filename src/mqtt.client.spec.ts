@@ -5,6 +5,7 @@ import { assert, use } from 'chai';
 import { RegisterClientOptions } from './mqtt.types';
 import { PacketType } from './mqtt.constants';
 import { RequiredConnectRequestOptions } from './packets';
+import { FlowStoppedError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
@@ -123,5 +124,22 @@ describe('MqttClient', function() {
         assert.strictEqual(fake.callCount, 2);
         assert.strictEqual(fake.args[1][0], PacketType.Connect);
         await client.disconnect(true);
+    });
+    describe('#stopFlow', function() {
+        it('should stop the correct flow', async function() {
+            const transport = createMockTransport([
+                Buffer.from('20020100', 'hex')
+            ]);
+            const client = new MqttClient({
+                transport,
+            });
+            const flow = client.startFlow(() => ({
+                accept() {return undefined},
+                next() {},
+                start() {}
+            }));
+            assert.isTrue(client.stopFlow(flow.flowId));
+            await assert.isRejected(flow, FlowStoppedError);
+        });
     });
 });

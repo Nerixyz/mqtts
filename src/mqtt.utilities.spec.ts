@@ -1,4 +1,5 @@
 import {
+    createFlowCounter,
     extractParams,
     isPublish,
     matchTopic,
@@ -66,3 +67,11 @@ describe('toMqttTopicFilter', function() {
             ['devices/garden/lights/+/state', 'devices/garden/lights/:lightId/state'])
     });
 });
+
+describe('createFlowCounter', function() {
+    it('should return a new count once next is called', function() {
+        const counter = createFlowCounter();
+        assert.strictEqual(counter.next(), globalThis.BigInt && globalThis.BigInt(1) || 1);
+        assert.strictEqual(counter.next(), globalThis.BigInt && globalThis.BigInt(2) || 2);
+    });
+})
