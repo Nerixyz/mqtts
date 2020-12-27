@@ -281,14 +281,14 @@ export class MqttClient<
         return promise as Promise<T> & {flowId: bigint | number};
     }
 
-    public stopFlow(flowId: bigint | number): boolean {
+    public stopFlow(flowId: bigint | number, rejection?: Error): boolean {
         const flow = this.activeFlows.find(f => f.flowId);
         if(!flow) return false;
 
         this.activeFlows = this.activeFlows.filter(f => f.flowId !== flowId);
 
         flow.finished = true;
-        flow.resolvers.reject(new FlowStoppedError());
+        flow.resolvers.reject(rejection ?? new FlowStoppedError());
 
         return true;
     }
