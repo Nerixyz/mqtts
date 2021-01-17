@@ -154,4 +154,40 @@ describe('MqttClient', function () {
             await assert.isRejected(flow, FlowStoppedError);
         });
     });
+
+    describe('listeners', function() {
+        it('should retain the listeners on reconnects', async function() {
+            const transport = createMockTransport([
+                Buffer.from('20020100', 'hex'),
+                Buffer.from('30050003616263', 'hex'),
+            ]);
+            const client = new MqttClient({
+                transport,
+                autoReconnect: true,
+            });
+
+            let resolveListener: undefined | (() => void) = undefined;
+            let listener = new Promise(r => resolveListener = r);
+            const fake = sinon.fake(() => resolveListener?.());
+
+            client.listen('abc', fake);
+
+            await client.connect();
+            await listener;
+
+            assert.isTrue(fake.calledOnce);
+            assert.strictEqual(fake.args[0][0].topic, 'abc');
+
+            resolveListener = undefined;
+            listener = new Promise(r => resolveListener = r);
+            transport.duplex.destroy();
+            await promisifyEvent(client, 'connect');
+            await listener;
+
+            assert.isTrue(fake.calledTwice);
+            assert.strictEqual(fake.args[1][0].topic, 'abc');
+
+            await client.disconnect(true);
+        });
+    });
 });
