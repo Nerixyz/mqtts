@@ -42,7 +42,7 @@ import {
 import { MqttMessageOutgoing } from './mqtt.message';
 import { ConnectError, FlowStoppedError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
-import { PacketType, packetTypeToString } from './mqtt.constants';
+import { EventMapping, PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { createDefaultPacketLogger, createFlowCounter, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
@@ -345,6 +345,8 @@ export class MqttClient<
 
     protected async handlePacket(packet: MqttParseResult<ReadMap, PacketType>): Promise<void> {
         this.logReceivedPacket(packet);
+        this.emit(PacketType[packet.type].toUpperCase() as keyof EventMapping, packet.data);
+
         let forceCheckFlows = false;
         // The following "type assertions" are valid as clients extending MqttClient have to implement their own methods
         switch (packet.type) {
