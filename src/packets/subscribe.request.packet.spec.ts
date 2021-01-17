@@ -43,17 +43,21 @@ describe('SubscribeRequestPacket', function () {
                 '02',
             );
         });
-        it('should throw if subscriptions.length = 0', function() {
-            assert.throws(() => writeSubscribePacket(PacketStream.empty(), {
-                identifier: 1,
-                subscriptions: []
-            }));
+        it('should throw if subscriptions.length = 0', function () {
+            assert.throws(() =>
+                writeSubscribePacket(PacketStream.empty(), {
+                    identifier: 1,
+                    subscriptions: [],
+                }),
+            );
         });
-        it('should throw if QoS > 2', function() {
-            assert.throws(() => writeSubscribePacket(PacketStream.empty(), {
-                identifier: 1,
-                subscriptions:[{topic: 'a'}, {qos: 3,topic: 'b'}],
-            }));
+        it('should throw if QoS > 2', function () {
+            assert.throws(() =>
+                writeSubscribePacket(PacketStream.empty(), {
+                    identifier: 1,
+                    subscriptions: [{ topic: 'a' }, { qos: 3, topic: 'b' }],
+                }),
+            );
         });
     });
 });

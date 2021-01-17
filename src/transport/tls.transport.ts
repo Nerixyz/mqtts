@@ -30,14 +30,17 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
     connect(): Promise<void> {
         return new Promise(resolve => {
             this.underlyingSocket.connect(this.options.port, this.options.host);
-            this.duplex.connect({
-                ...this.options.additionalOptions,
-                host: this.options.host,
-                port: this.options.port,
-            }, () => {
-                this.duplex.uncork();
-                resolve();
-            });
+            this.duplex.connect(
+                {
+                    ...this.options.additionalOptions,
+                    host: this.options.host,
+                    port: this.options.port,
+                },
+                () => {
+                    this.duplex.uncork();
+                    resolve();
+                },
+            );
         });
     }
 }

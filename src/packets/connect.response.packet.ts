@@ -18,9 +18,9 @@ export function readConnectResponsePacket(stream: PacketStream, remaining: numbe
     expectRemainingLength(remaining, 2);
     const ack = stream.readByte();
     const returnCode = stream.readByte();
-    if(ack > 1) {
+    if (ack > 1) {
         throw new Error('Invalid ack');
-    } else if(returnCode > 5) {
+    } else if (returnCode > 5) {
         throw new Error('Invalid return code');
     }
     return new ConnectResponsePacket(ack, returnCode as ConnectReturnCode);

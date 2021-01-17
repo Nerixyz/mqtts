@@ -4,7 +4,7 @@ import { assertPacket } from '../../test/utilities';
 import { assert } from 'chai';
 
 describe('ConnectResponsePacket', function () {
-    describe('readConnectResponsePacket', function() {
+    describe('readConnectResponsePacket', function () {
         it('should read a basic packet', function () {
             assertPacket(
                 readConnectResponsePacket(PacketStream.fromBuffer(Buffer.from('0100', 'hex')), 2),
@@ -22,49 +22,61 @@ describe('ConnectResponsePacket', function () {
             assert.throws(() => readConnectResponsePacket(PacketStream.fromBuffer(Buffer.from('0106', 'hex')), 2));
         });
     });
-    describe('mock', function() {
-        describe('#sessionPresent', function() {
-            it('should return true if the acknowledge flags = 1', function() {
+    describe('mock', function () {
+        describe('#sessionPresent', function () {
+            it('should return true if the acknowledge flags = 1', function () {
                 assert.strictEqual(new ConnectResponsePacket(1, ConnectReturnCode.Accepted).sessionPresent, true);
             });
-            it('should return false if the acknowledge flags = 0', function() {
+            it('should return false if the acknowledge flags = 0', function () {
                 assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.Accepted).sessionPresent, false);
             });
         });
 
-        describe('#isSuccess', function() {
-            it('should return true if the return code is 0', function() {
-               assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.Accepted).isSuccess, true);
+        describe('#isSuccess', function () {
+            it('should return true if the return code is 0', function () {
+                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.Accepted).isSuccess, true);
             });
-            it('should return false if the code is != 0', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.UnacceptableProtocolVersion).isSuccess, false)
+            it('should return false if the code is != 0', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.UnacceptableProtocolVersion).isSuccess,
+                    false,
+                );
             });
         });
 
-        describe('#errorName', function() {
-            it('should return a proper error name for the code 0', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.Accepted).errorName,
-                    'Accepted');
+        describe('#errorName', function () {
+            it('should return a proper error name for the code 0', function () {
+                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.Accepted).errorName, 'Accepted');
             });
-            it('should return a proper error name for the code 1', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.UnacceptableProtocolVersion).errorName,
-                    'UnacceptableProtocolVersion');
+            it('should return a proper error name for the code 1', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.UnacceptableProtocolVersion).errorName,
+                    'UnacceptableProtocolVersion',
+                );
             });
-            it('should return a proper error name for the code 2', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.IdentifierRejected).errorName,
-                    'IdentifierRejected');
+            it('should return a proper error name for the code 2', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.IdentifierRejected).errorName,
+                    'IdentifierRejected',
+                );
             });
-            it('should return a proper error name for the code 3', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.ServerUnavailable).errorName,
-                    'ServerUnavailable');
+            it('should return a proper error name for the code 3', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.ServerUnavailable).errorName,
+                    'ServerUnavailable',
+                );
             });
-            it('should return a proper error name for the code 4', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.BadUsernameOrPassword).errorName,
-                    'BadUsernameOrPassword');
+            it('should return a proper error name for the code 4', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.BadUsernameOrPassword).errorName,
+                    'BadUsernameOrPassword',
+                );
             });
-            it('should return a proper error name for the code 5', function() {
-                assert.strictEqual(new ConnectResponsePacket(0, ConnectReturnCode.NotAuthorized).errorName,
-                    'NotAuthorized');
+            it('should return a proper error name for the code 5', function () {
+                assert.strictEqual(
+                    new ConnectResponsePacket(0, ConnectReturnCode.NotAuthorized).errorName,
+                    'NotAuthorized',
+                );
             });
         });
     });

@@ -16,20 +16,20 @@ export enum PacketType {
 }
 
 export interface EventMapping {
-    CONNECT: PacketType.Connect,
-    CONNACK: PacketType.ConnAck,
-    PUBLISH: PacketType.Publish,
-    PUBACK: PacketType.PubAck,
-    PUBREC: PacketType.PubRec,
-    PUBREL: PacketType.PubRel,
-    PUBCOMP: PacketType.PubComp,
-    SUBSCRIBE: PacketType.Subscribe,
-    SUBACK: PacketType.SubAck,
-    UNSUBSCRIBE: PacketType.Unsubscribe,
-    UNSUBACK: PacketType.UnsubAck,
-    PINGREQ: PacketType.PingReq,
-    PINGRESP: PacketType.PingResp,
-    DISCONNECT: PacketType.Disconnect,
+    CONNECT: PacketType.Connect;
+    CONNACK: PacketType.ConnAck;
+    PUBLISH: PacketType.Publish;
+    PUBACK: PacketType.PubAck;
+    PUBREC: PacketType.PubRec;
+    PUBREL: PacketType.PubRel;
+    PUBCOMP: PacketType.PubComp;
+    SUBSCRIBE: PacketType.Subscribe;
+    SUBACK: PacketType.SubAck;
+    UNSUBSCRIBE: PacketType.Unsubscribe;
+    UNSUBACK: PacketType.UnsubAck;
+    PINGREQ: PacketType.PingReq;
+    PINGRESP: PacketType.PingResp;
+    DISCONNECT: PacketType.Disconnect;
 }
 
 const reverseMapping = Object.fromEntries(Object.entries(PacketType).map(([k, v]) => [v, k]));

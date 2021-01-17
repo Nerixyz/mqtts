@@ -4,8 +4,8 @@ import { MqttMessage } from './mqtt.message';
 import { assert } from 'chai';
 import { ignoreEverything } from '../test/utilities';
 
-describe('MqttListener', function() {
-    it('should handles messages correctly', async function() {
+describe('MqttListener', function () {
+    it('should handles messages correctly', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake();
         listener.addHandler({
@@ -19,12 +19,13 @@ describe('MqttListener', function() {
         await listener.handleMessage(message);
         assert.isTrue(fake.calledOnce);
         assert.deepStrictEqual(fake.lastCall.lastArg, {
-            ...message, params: {},
+            ...message,
+            params: {},
         });
-        await listener.handleMessage({payload: Buffer.alloc(0), topic: 'garden/lights/2/state'});
+        await listener.handleMessage({ payload: Buffer.alloc(0), topic: 'garden/lights/2/state' });
         assert.isTrue(fake.calledOnce);
     });
-    it('should add params to the message', async function() {
+    it('should add params to the message', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake();
         listener.addHandler({
@@ -39,7 +40,8 @@ describe('MqttListener', function() {
         await listener.handleMessage(message1);
         assert.isTrue(fake.calledOnce);
         assert.deepStrictEqual(fake.lastCall.lastArg, {
-            ...message1, params: {lightId: '1'},
+            ...message1,
+            params: { lightId: '1' },
         });
         const message2: MqttMessage = {
             topic: 'garden/lights/2/state',
@@ -48,10 +50,11 @@ describe('MqttListener', function() {
         await listener.handleMessage(message2);
         assert.isTrue(fake.calledTwice);
         assert.deepStrictEqual(fake.lastCall.lastArg, {
-            ...message2, params: {lightId: '2'},
-        })
+            ...message2,
+            params: { lightId: '2' },
+        });
     });
-    it('should invoke the validator', async function() {
+    it('should invoke the validator', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake();
         listener.addHandler({
@@ -66,11 +69,14 @@ describe('MqttListener', function() {
         };
         await listener.handleMessage(message);
         assert.isTrue(fake.calledOnce);
-        assert.deepStrictEqual(fake.lastCall.args, [{
-            ...message,
-        }, { lightId: '1' }] );
+        assert.deepStrictEqual(fake.lastCall.args, [
+            {
+                ...message,
+            },
+            { lightId: '1' },
+        ]);
     });
-    it('should invoke the transformer', async function() {
+    it('should invoke the transformer', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake(() => 'transformed');
         const fakeHandler = sinon.fake();
@@ -87,11 +93,12 @@ describe('MqttListener', function() {
         await listener.handleMessage(message);
         assert.isTrue(fake.calledOnce);
         assert.deepStrictEqual(fake.lastCall.lastArg, {
-            ...message, params: { lightId: '1' }
+            ...message,
+            params: { lightId: '1' },
         });
         assert.isTrue(fakeHandler.calledOnceWithExactly('transformed'));
     });
-    it('should transform promises', async function() {
+    it('should transform promises', async function () {
         const listener = new MqttListener();
         const fakeHandler = sinon.fake();
         listener.addHandler({
@@ -106,7 +113,7 @@ describe('MqttListener', function() {
         });
         assert.isTrue(fakeHandler.calledOnceWithExactly('transformed'));
     });
-    it('should remove a listener once the function is invoked', async function() {
+    it('should remove a listener once the function is invoked', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake();
         const removeFn = listener.addHandler({

@@ -6,9 +6,9 @@ import { PacketType } from '../mqtt.constants';
 import { PublishReleasePacket } from '../packets';
 import sinon = require('sinon');
 
-describe('incomingPublishFlow', function() {
-    describe('QoS 0', function() {
-        it('should succeed immediately', function() {
+describe('incomingPublishFlow', function () {
+    describe('QoS 0', function () {
+        it('should succeed immediately', function () {
             const fake = sinon.fake();
             const message: MqttMessage = {
                 topic: 'A',
@@ -19,8 +19,8 @@ describe('incomingPublishFlow', function() {
             assert.strictEqual(fake.calledOnceWithExactly(message), true);
         });
     });
-    describe('QoS 1', function() {
-        it('should send a PubAck packet', function() {
+    describe('QoS 1', function () {
+        it('should send a PubAck packet', function () {
             const fake = sinon.fake();
             const message: MqttMessage = {
                 topic: 'A',
@@ -31,13 +31,13 @@ describe('incomingPublishFlow', function() {
             const next = flow.start();
             assert.deepStrictEqual(next, {
                 type: PacketType.PubAck,
-                options: {identifier: 1}
+                options: { identifier: 1 },
             });
             assert.strictEqual(fake.calledOnceWithExactly(message), true);
         });
     });
-    describe('QoS 2', function() {
-        it('should send PubRec wait for PubRel and send PubComp', function() {
+    describe('QoS 2', function () {
+        it('should send PubRec wait for PubRel and send PubComp', function () {
             const fake = sinon.fake();
             const message: MqttMessage = {
                 topic: 'A',
@@ -48,7 +48,7 @@ describe('incomingPublishFlow', function() {
             const first = flow.start();
             assert.deepStrictEqual(first, {
                 type: PacketType.PubRec,
-                options: {identifier: 1}
+                options: { identifier: 1 },
             });
             assert.strictEqual(fake.callCount, 0);
             const incoming = new PublishReleasePacket(1);
@@ -56,7 +56,7 @@ describe('incomingPublishFlow', function() {
             assert.strictEqual(fake.callCount, 0);
             assert.deepStrictEqual(flow.next?.(incoming), {
                 type: PacketType.PubComp,
-                options: { identifier: 1 }
+                options: { identifier: 1 },
             });
             assert.strictEqual(fake.calledOnceWithExactly(message), true);
         });

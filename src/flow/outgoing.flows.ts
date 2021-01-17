@@ -30,8 +30,7 @@ export function outgoingConnectFlow(
         ...options,
     };
     return (success, error) => ({
-        start: () =>
-            defaultWrite(PacketType.Connect, finalOptions),
+        start: () => defaultWrite(PacketType.Connect, finalOptions),
         accept: isConnAck,
         next: (res: ConnectResponsePacket) => (res.isSuccess ? success(res) : error(res.errorName)),
     });
@@ -106,15 +105,18 @@ export function outgoingSubscribeFlow(
         start: () =>
             defaultWrite(PacketType.Subscribe, {
                 identifier: id,
-                subscriptions: [{qos: subscription.qosLevel || 0,
-                    topic: subscription.topic,}],
+                subscriptions: [{ qos: subscription.qosLevel || 0, topic: subscription.topic }],
             }),
         accept: (packet: unknown) => isSubAck(packet) && packet.identifier === id,
         next: (packet: SubscribeResponsePacket) => {
             if (!packet.anyError) {
                 success(packet.returnCodes[0]);
             } else {
-                error(new SubscribeError(`Failed to subscribe to ${subscription.topic} - Return Codes: ${packet.returnCodes.join(', ')}`));
+                error(
+                    new SubscribeError(
+                        `Failed to subscribe to ${subscription.topic} - Return Codes: ${packet.returnCodes.join(', ')}`,
+                    ),
+                );
             }
         },
     });
@@ -129,7 +131,7 @@ export function outgoingUnsubscribeFlow(
         start: () =>
             defaultWrite(PacketType.Unsubscribe, {
                 identifier: id,
-                topics: [subscription.topic]
+                topics: [subscription.topic],
             }),
         accept: packet => isUnsubAck(packet) && packet.identifier === id,
         next: () => success(),

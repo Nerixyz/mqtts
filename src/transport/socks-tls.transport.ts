@@ -3,7 +3,7 @@ import { TlsTransportOptions } from './tls.transport';
 import { SocksClient, SocksProxy } from 'socks';
 import { Duplex, PassThrough, Readable, Writable } from 'stream';
 import duplexify = require('duplexify');
-import {connect} from 'tls';
+import { connect } from 'tls';
 
 export interface SocksTlsTransportOptions extends TlsTransportOptions {
     proxyOptions: SocksProxy;
@@ -21,7 +21,7 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(this.writable, this.readable, {objectMode: true});
+        this.duplex = duplexify(this.writable, this.readable, { objectMode: true });
 
         // buffer packets until connect()
         this.duplex.cork();
@@ -32,23 +32,25 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
             proxy: this.options.proxyOptions,
             destination: {
                 host: this.options.host,
-                port: this.options.port
+                port: this.options.port,
             },
-            command: 'connect'
+            command: 'connect',
         });
         return new Promise(res => {
-            const tlsSocket = connect({
-                ...this.options.additionalOptions,
-                socket: info.socket,
-                host: this.options.host,
-                port: this.options.port,
-            }, () => {
-                tlsSocket.pipe(this.readable);
-                this.writable.pipe(tlsSocket);
-                this.duplex.uncork();
-                res();
-            });
+            const tlsSocket = connect(
+                {
+                    ...this.options.additionalOptions,
+                    socket: info.socket,
+                    host: this.options.host,
+                    port: this.options.port,
+                },
+                () => {
+                    tlsSocket.pipe(this.readable);
+                    this.writable.pipe(tlsSocket);
+                    this.duplex.uncork();
+                    res();
+                },
+            );
         });
     }
-
 }

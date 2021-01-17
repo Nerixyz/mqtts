@@ -35,7 +35,7 @@ export type TransformerFn<TOut, Params extends Record<string, string>> = (
     message: IncomingListenMessage<Params>,
 ) => TOut | Promise<TOut>;
 
-export type MessageWithParams<T extends Record<string, string> = Record<string, string>> = MqttMessage & {params: T};
+export type MessageWithParams<T extends Record<string, string> = Record<string, string>> = MqttMessage & { params: T };
 
 export interface HandlerInfo<T, Params extends Record<string, string>> {
     topicFilter: string;

@@ -11,10 +11,10 @@ export interface RequiredConnectRequestOptions {
     clientId: string;
     keepAlive: number;
     will?: {
-        topic: string,
-        message: Buffer | string,
-        retained?: boolean,
-        qosLevel?: number,
+        topic: string;
+        message: Buffer | string;
+        retained?: boolean;
+        qosLevel?: number;
     };
     username?: string;
     password?: Buffer | string;
@@ -30,12 +30,9 @@ export function writeConnectPacket(stream: PacketStream, options: RequiredConnec
         .writeByte(makeFlags(options))
         .writeWord(options.keepAlive);
 
-
     // Payload
     stream.writeString(options.clientId);
-    options.will && stream
-            .writeString(options.will.topic)
-            .writeRawAndLength(toBuffer(options.will.message));
+    options.will && stream.writeString(options.will.topic).writeRawAndLength(toBuffer(options.will.message));
     options.username && stream.writeString(options.username);
     options.password && stream.writeRawAndLength(toBuffer(options.password));
 
@@ -44,8 +41,10 @@ export function writeConnectPacket(stream: PacketStream, options: RequiredConnec
 
 export function makeFlags(options: ConnectRequestOptions): number {
     if (!options) return 0;
-    if(notUndefined(options.password) && !notUndefined(options.username))
-        throw new MalformedPacketError('MQTT-3.1.2-22 If the User Name Flag is set to 0, the Password Flag MUST be set to 0');
+    if (notUndefined(options.password) && !notUndefined(options.username))
+        throw new MalformedPacketError(
+            'MQTT-3.1.2-22 If the User Name Flag is set to 0, the Password Flag MUST be set to 0',
+        );
 
     let flags = 0;
     if (notUndefined(options.username)) flags |= 0x1 << 7;

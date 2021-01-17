@@ -16,15 +16,18 @@ export enum StateId {
 
 // TODO: errors
 
-export class MqttBaseClient<ReadMap extends PacketReadResultMap,
-    WriteMap extends PacketWriteOptionsMap> extends EventEmitter<{
-    error: (e: Error) => void,
-    warning: (e: Error) => void,
-    connect: (packet: ReadMap[PacketType.ConnAck]) => void,
-    disconnect: (reason?: string) => void,
-    message: (message: MqttMessage) => void,
-} & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }> {
-
+export class MqttBaseClient<
+    ReadMap extends PacketReadResultMap,
+    WriteMap extends PacketWriteOptionsMap
+> extends EventEmitter<
+    {
+        error: (e: Error) => void;
+        warning: (e: Error) => void;
+        connect: (packet: ReadMap[PacketType.ConnAck]) => void;
+        disconnect: (reason?: string) => void;
+        message: (message: MqttMessage) => void;
+    } & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }
+> {
     get current(): StateId {
         return this.sate;
     }
@@ -57,7 +60,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     }
 
     private next(newState: StateId) {
-        if(newState > this.current && this.current >= 0) {
+        if (newState > this.current && this.current >= 0) {
             this.sate = newState;
         } else {
             throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);
@@ -65,28 +68,30 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     }
 
     public expectReady(): void {
-        if(!this.ready) {
+        if (!this.ready) {
             throw new Error(`Expected client to be ready but got ${this.current}`);
         }
     }
 
     public expectCreated(): void {
-        if(!this.created) {
+        if (!this.created) {
             throw new Error(`Expected client to be created but got ${this.current}`);
         }
     }
 
     public expectConnecting(): void {
-        if(!this.connecting) {
+        if (!this.connecting) {
             throw new Error(`Expected client to be connecting but got ${this.current}`);
         }
     }
 
     protected reset(): void {
-        if(this.sate === StateId.Created || this.sate === StateId.Disconnected) {
+        if (this.sate === StateId.Created || this.sate === StateId.Disconnected) {
             this.sate = StateId.Created;
         } else {
-            throw new Error(`Invalid state: Resetting requires the client to be Disconnected or Created (current: ${this.current})`);
+            throw new Error(
+                `Invalid state: Resetting requires the client to be Disconnected or Created (current: ${this.current})`,
+            );
         }
     }
 
@@ -138,7 +143,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
 
     public createConnectPromise() {
         this.expectConnecting();
-        if(this._connectPromise) {
+        if (this._connectPromise) {
             throw new Error('Already created a promise.');
         }
         this._connectPromise = new Promise<void>((resolve, reject) => {
@@ -149,8 +154,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     }
 
     public resolveConnectPromise() {
-        if(!this._connectResolve)
-            throw new Error('No resolver found');
+        if (!this._connectResolve) throw new Error('No resolver found');
         this._connectResolve();
         this._connectPromise = undefined;
         this._connectResolve = undefined;
@@ -158,8 +162,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     }
 
     public rejectConnectPromise(e: Error) {
-        if(!this._connectReject)
-            throw new Error('No resolver found');
+        if (!this._connectReject) throw new Error('No resolver found');
         this._connectReject(e);
         this._connectPromise = undefined;
         this._connectResolve = undefined;

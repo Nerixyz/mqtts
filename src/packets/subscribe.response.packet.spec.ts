@@ -24,19 +24,31 @@ describe('SubscribeResponsePacket', function () {
                 ]),
             );
         });
-        it('should throw if one return code is not 0/1/2/0x80', function() {
+        it('should throw if one return code is not 0/1/2/0x80', function () {
             assert.throws(() => readSubscribeResponsePacket(PacketStream.fromHex('0001020103'), 5));
         });
     });
-    describe('model', function() {
-        describe('#anyError', function() {
-            it('should return true if the return codes contain Fail', function() {
-                assert.strictEqual(new SubscribeResponsePacket(1, [
-                    SubscribeReturnCode.MaxQoS2, SubscribeReturnCode.MaxQoS1,SubscribeReturnCode.Fail]).anyError, true);
+    describe('model', function () {
+        describe('#anyError', function () {
+            it('should return true if the return codes contain Fail', function () {
+                assert.strictEqual(
+                    new SubscribeResponsePacket(1, [
+                        SubscribeReturnCode.MaxQoS2,
+                        SubscribeReturnCode.MaxQoS1,
+                        SubscribeReturnCode.Fail,
+                    ]).anyError,
+                    true,
+                );
             });
-            it('should return false if there is no Fail', function() {
-                assert.strictEqual(new SubscribeResponsePacket(1, [
-                    SubscribeReturnCode.MaxQoS2, SubscribeReturnCode.MaxQoS1,SubscribeReturnCode.MaxQoS0]).anyError, false);
+            it('should return false if there is no Fail', function () {
+                assert.strictEqual(
+                    new SubscribeResponsePacket(1, [
+                        SubscribeReturnCode.MaxQoS2,
+                        SubscribeReturnCode.MaxQoS1,
+                        SubscribeReturnCode.MaxQoS0,
+                    ]).anyError,
+                    false,
+                );
             });
         });
     });

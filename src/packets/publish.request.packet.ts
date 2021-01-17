@@ -4,12 +4,11 @@ import { EndOfStreamError } from '../errors';
 import { toBuffer } from '../mqtt.utilities';
 
 export class PublishRequestPacket extends IdentifierPacket {
-
     get duplicate(): boolean {
         return !!(this.flags & 0b1000);
     }
     get qos(): 0 | 1 | 2 {
-        return ((this.flags & 0b0110) >> 1) as (0 | 1 | 2);
+        return ((this.flags & 0b0110) >> 1) as 0 | 1 | 2;
     }
     get retain(): boolean {
         return !!(this.flags & 0b0001);
@@ -17,8 +16,7 @@ export class PublishRequestPacket extends IdentifierPacket {
 
     constructor(public flags: number, public topic: string, identifier: number | undefined, public payload: Buffer) {
         super(identifier ?? -1);
-        if(((flags & 0b0110) >> 1) > 2)
-            throw new Error('Invalid QoS');
+        if ((flags & 0b0110) >> 1 > 2) throw new Error('Invalid QoS');
     }
 }
 
@@ -34,25 +32,27 @@ export interface PublishPacketOptions {
 export function writePublishRequestPacket(stream: PacketStream, options: PublishPacketOptions): PacketWriteResult {
     options.qos = options.qos ?? 0;
     stream.writeString(options.topic);
-    if(options.qos > 2)
-        throw new Error('Unsupported QoS');
-    if(options.qos > 0) {
-        if(!options.identifier)
-            throw new Error('Expected identifier for QoS != 0');
+    if (options.qos > 2) throw new Error('Unsupported QoS');
+    if (options.qos > 0) {
+        if (!options.identifier) throw new Error('Expected identifier for QoS != 0');
 
         stream.writeWord(options.identifier);
     }
     stream.write(toBuffer(options.payload ?? Buffer.alloc(0)));
-    return  {
+    return {
         flags: (Number(!!options.duplicate) << 3) | ((options.qos & 0x3) << 1) | Number(!!options.retain),
         identifier: options.identifier,
-    }
+    };
 }
 
-export function readPublishRequestPacket(stream: PacketStream, remainingLength: number, flags: number): PublishRequestPacket {
+export function readPublishRequestPacket(
+    stream: PacketStream,
+    remainingLength: number,
+    flags: number,
+): PublishRequestPacket {
     const startPos = stream.position;
     const topic = stream.readString();
-    const identifier = (flags & 0b0110) ? stream.readWord() : undefined;
+    const identifier = flags & 0b0110 ? stream.readWord() : undefined;
 
     const payloadLength = remainingLength - (stream.position - startPos);
     if (payloadLength > stream.length - stream.position) throw new EndOfStreamError();

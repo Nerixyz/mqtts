@@ -2,7 +2,6 @@ export class IdentifierPacket {
     constructor(public readonly identifier: number) {}
 }
 
-
 export interface PacketWriteResult {
     flags?: number;
     identifier?: number;

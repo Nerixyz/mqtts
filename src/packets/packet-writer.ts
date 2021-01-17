@@ -28,10 +28,9 @@ export class PacketWriter<WriteOptions extends PacketWriteOptionsMap = DefaultPa
             throw new Error('No packet function found');
         }
         const result = fn(packetStream, options);
-        if(result.flags && (result.flags < 0 || result.flags > 0xf)) {
+        if (result.flags && (result.flags < 0 || result.flags > 0xf)) {
             throw new Error('Invalid flags');
         }
-
 
         this.logger.logPacketWrite(type, { ...options, flags: result.flags ?? 0, identifier: result.identifier });
 
@@ -39,23 +38,23 @@ export class PacketWriter<WriteOptions extends PacketWriteOptionsMap = DefaultPa
         finalStream.writeByte((type << 4) | (result.flags ?? 0));
         //if (packetStream.length === 0) return finalStream.data;
 
-        return finalStream
-            .writeVariableByteInteger(packetStream.length)
-            .write(packetStream.data)
-            .data;
+        return finalStream.writeVariableByteInteger(packetStream.length).write(packetStream.data).data;
     }
 }
 
-export function defaultWrite<T extends PacketType>(type: T, options?: DefaultPacketWriteOptions[T]): WriteData<DefaultPacketWriteOptions, T> {
+export function defaultWrite<T extends PacketType>(
+    type: T,
+    options?: DefaultPacketWriteOptions[T],
+): WriteData<DefaultPacketWriteOptions, T> {
     return {
         type,
-        options
+        options,
     };
 }
 
 export interface WriteData<WriteMap extends PacketWriteOptionsMap, T extends PacketType> {
-    type: T,
-    options?: WriteMap[T]
+    type: T;
+    options?: WriteMap[T];
 }
 
 export const DefaultPacketWriteMap: PacketWriteMap<DefaultPacketWriteOptions> = {
@@ -71,10 +70,7 @@ export const DefaultPacketWriteMap: PacketWriteMap<DefaultPacketWriteOptions> = 
 };
 
 export type PacketWriteMap<Options extends PacketWriteOptionsMap> = {
-    [P in PacketType]?: (
-        stream: PacketStream,
-        options: Options[P],
-    ) => PacketWriteResult;
+    [P in PacketType]?: (stream: PacketStream, options: Options[P]) => PacketWriteResult;
 };
 
 export type PacketWriteOptionsMap = { [x in PacketType]: any };

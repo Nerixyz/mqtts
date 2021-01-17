@@ -1,5 +1,5 @@
 import { writeConnectPacket } from './connect.request.packet';
-import {  assertWritePacket } from '../../test/utilities';
+import { assertWritePacket } from '../../test/utilities';
 import { assert } from 'chai';
 import { PacketStream } from '../packet-stream';
 import { MalformedPacketError } from '../errors';
@@ -81,10 +81,14 @@ describe('ConnectRequestPacket', function () {
             '43',
         );
     });
-    it('should throw if no username but a password is present', function() {
-        assert.throws(() => writeConnectPacket(PacketStream.empty(), {
-            ...defaults,
-            password: 'ABC',
-        }), MalformedPacketError);
+    it('should throw if no username but a password is present', function () {
+        assert.throws(
+            () =>
+                writeConnectPacket(PacketStream.empty(), {
+                    ...defaults,
+                    password: 'ABC',
+                }),
+            MalformedPacketError,
+        );
     });
 });

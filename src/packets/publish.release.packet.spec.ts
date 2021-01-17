@@ -1,13 +1,9 @@
 import { assertPacket, assertWritePacket } from '../../test/utilities';
-import {
-    PublishReleasePacket,
-    readPublishReleasePacket,
-    writePublishReleasePacket,
-} from './publish.release.packet';
+import { PublishReleasePacket, readPublishReleasePacket, writePublishReleasePacket } from './publish.release.packet';
 import { PacketStream } from '../packet-stream';
 import { assert } from 'chai';
 
-describe('PublishReleasePacket', function() {
+describe('PublishReleasePacket', function () {
     describe('readPublishReleasePacket', function () {
         it('should read properly', function () {
             assertPacket(

@@ -48,12 +48,14 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
         while (stream.remainingBytes > 0) {
             const firstByte = stream.readByte();
             const type = (firstByte >> 4) as PacketType;
-            const flags = (firstByte & 0x0f);
+            const flags = firstByte & 0x0f;
 
             const packetFn = this.mapping[type];
             if (!packetFn) {
                 callback(
-                    new UnexpectedPacketError(`No packet found for ${type}; @${stream.position - 1} len: ${stream.length}`),
+                    new UnexpectedPacketError(
+                        `No packet found for ${type}; @${stream.position - 1} len: ${stream.length}`,
+                    ),
                 );
                 return;
             }
@@ -64,7 +66,7 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
                 this.push({
                     type,
                     data: packet,
-                    flags
+                    flags,
                 });
                 stream.cut();
                 startPos = stream.position;
@@ -80,7 +82,9 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
                 } else {
                     callback(
                         new MalformedPacketError(
-                            `Error in parser (type: ${packetTypeToString(type)}): ${e.message || e} - stream: ${stream.data.toString('base64')}`,
+                            `Error in parser (type: ${packetTypeToString(type)}): ${
+                                e.message || e
+                            } - stream: ${stream.data.toString('base64')}`,
                         ),
                     );
                     return;

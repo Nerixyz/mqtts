@@ -23,13 +23,12 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(this.writable, this.readable, {objectMode: true});
+        this.duplex = duplexify(this.writable, this.readable, { objectMode: true });
     }
-
 
     connect(): Promise<void> {
         this.socket = new WebSocket(this.options.url, this.options.additionalOptions);
-        this.socketStream = WebSocket.createWebSocketStream(this.socket, {objectMode: true});
+        this.socketStream = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
         this.socketStream.pipe(this.readable);
         this.writable.pipe(this.socketStream);
 

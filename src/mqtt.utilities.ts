@@ -123,18 +123,18 @@ function stringifyValue(value: unknown): string {
 }
 
 export function createFlowCounter() {
-    if(!globalThis.BigInt) {
+    if (!globalThis.BigInt) {
         let count = 0;
         return {
             next() {
                 return ++count;
             },
-        }
+        };
     }
     let count = BigInt(0);
     return {
         next() {
-            return count += BigInt(1);
+            return (count += BigInt(1));
         },
-    }
+    };
 }
