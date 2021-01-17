@@ -1,7 +1,7 @@
 import { Transport } from './transport';
 import { TlsTransportOptions } from './tls.transport';
 import { SocksClient, SocksProxy } from 'socks';
-import { Duplex, PassThrough, Readable, Writable } from 'stream';
+import { Duplex, PassThrough } from 'stream';
 import duplexify = require('duplexify');
 import { connect } from 'tls';
 
