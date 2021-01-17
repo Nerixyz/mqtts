@@ -153,43 +153,6 @@ export class MqttClient<
         return this.registerClient(await this.resolveConnectOptions());
     }
 
-    protected registerClient(
-        options: RegisterClientOptions,
-        noNewPromise = false,
-        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>,
-    ): Promise<any> {
-        let promise;
-        if (noNewPromise) {
-            const flow = this.activeFlows.find(x => x.flowFunc === lastFlow);
-            if (!flow) {
-                promise = Promise.reject(new Error('Could not find flow'));
-            } else {
-                const packet = flow.callbacks.start();
-                if (packet) this.sendData(this.writer.write(packet.type, packet.options));
-                promise = Promise.resolve();
-            }
-        } else {
-            promise = this.createConnectPromise();
-            lastFlow = lastFlow ?? this.getConnectFlow(options);
-            this.startFlow(lastFlow)
-                .then(() => this.resolveConnectPromise())
-                .catch(e => this.rejectConnectPromise(e));
-        }
-        this.connectTimer =
-            typeof options.connectDelay === 'undefined'
-                ? undefined
-                : this.executeDelayed(options.connectDelay ?? 2000, () =>
-                      // This Promise will only reject if the flow wasn't found
-                      this.registerClient(options, true, lastFlow).catch(e => this.rejectConnectPromise(e)),
-                  );
-        return promise;
-    }
-
-    protected getConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ReadMap, WriteMap, unknown> {
-        // assume the defaults are used
-        return outgoingConnectFlow(options) as PacketFlowFunc<ReadMap, WriteMap, unknown>;
-    }
-
     public publish(message: MqttMessageOutgoing): Promise<MqttMessageOutgoing> {
         return this.startFlow(outgoingPublishFlow(message) as PacketFlowFunc<ReadMap, WriteMap, MqttMessageOutgoing>);
     }
@@ -315,6 +278,43 @@ export class MqttClient<
 
     protected clearFinishedFlows(): void {
         this.activeFlows = this.activeFlows.filter(flow => !flow.finished);
+    }
+
+    protected registerClient(
+        options: RegisterClientOptions,
+        noNewPromise = false,
+        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>,
+    ): Promise<any> {
+        let promise;
+        if (noNewPromise) {
+            const flow = this.activeFlows.find(x => x.flowFunc === lastFlow);
+            if (!flow) {
+                promise = Promise.reject(new Error('Could not find flow'));
+            } else {
+                const packet = flow.callbacks.start();
+                if (packet) this.sendData(this.writer.write(packet.type, packet.options));
+                promise = Promise.resolve();
+            }
+        } else {
+            promise = this.createConnectPromise();
+            lastFlow = lastFlow ?? this.getConnectFlow(options);
+            this.startFlow(lastFlow)
+                .then(() => this.resolveConnectPromise())
+                .catch(e => this.rejectConnectPromise(e));
+        }
+        this.connectTimer =
+            typeof options.connectDelay === 'undefined'
+                ? undefined
+                : this.executeDelayed(options.connectDelay ?? 2000, () =>
+                    // This Promise will only reject if the flow wasn't found
+                    this.registerClient(options, true, lastFlow).catch(e => this.rejectConnectPromise(e)),
+                );
+        return promise;
+    }
+
+    protected getConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ReadMap, WriteMap, unknown> {
+        // assume the defaults are used
+        return outgoingConnectFlow(options) as PacketFlowFunc<ReadMap, WriteMap, unknown>;
     }
 
     protected updateKeepAlive(value: number): void {
