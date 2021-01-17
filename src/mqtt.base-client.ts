@@ -40,8 +40,10 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
     get connecting(): boolean {
         return this.current === StateId.Connecting;
     }
+    // although it might seem weird, this is intended
+    // if the client is just created, it's not connected
     get disconnected(): boolean {
-        return this.current === StateId.Disconnected;
+        return this.current === StateId.Disconnected || this.current === StateId.Created;
     }
 
     protected emitWarning = (e: Error) => this.emit('warning', e);
