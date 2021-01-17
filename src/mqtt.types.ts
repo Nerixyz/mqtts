@@ -20,8 +20,14 @@ export type MqttClientConstructorOptions<
     createTransformer?: () => MqttTransformer<ReadMap>;
     writeMap?: PacketWriteMap<WriteMap>;
     packetWriter?: PacketWriter<WriteMap>;
-    autoReconnect?: boolean;
+    autoReconnect?: boolean | MqttAutoReconnectOptions;
 };
+
+export interface MqttAutoReconnectOptions {
+    maxReconnectAttempts?: number;
+    reconnectUnready?: boolean;
+    resetOnConnect?: boolean;
+}
 
 export interface MqttSubscription {
     topic: string;
@@ -51,7 +57,8 @@ export interface ListenOptions<TOut, Params extends Record<string, string>> {
     transformer?: TransformerFn<TOut, Params>;
 }
 
-export interface ListenSubscribeOptions<TOut, Params extends Record<string, string>> extends ListenOptions<TOut, Params> {
+export interface ListenSubscribeOptions<TOut, Params extends Record<string, string>>
+    extends ListenOptions<TOut, Params> {
     subscriptionInfo?: Partial<MqttSubscription>;
 }
 

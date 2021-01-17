@@ -9,13 +9,11 @@ import { FlowStoppedError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
-describe('MqttClient', function() {
-    it('should connect', async function() {
+describe('MqttClient', function () {
+    it('should connect', async function () {
         const fake = sinon.fake();
         const client = new MqttClient({
-            transport: createMockTransport([
-                Buffer.from('20020100', 'hex')
-            ]),
+            transport: createMockTransport([Buffer.from('20020100', 'hex')]),
             packetWriter: createMockPacketWriter(fake),
         });
         const options: RegisterClientOptions = {
@@ -34,10 +32,8 @@ describe('MqttClient', function() {
         });
         await client.disconnect(true);
     });
-    it('should wire the transport', async function() {
-        const transport = createMockTransport([
-            Buffer.from('20020100', 'hex')
-        ]);
+    it('should wire the transport', async function () {
+        const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
         const message = Buffer.alloc(0);
         const client = new MqttClient({
             transport,
@@ -47,7 +43,7 @@ describe('MqttClient', function() {
         assert.deepStrictEqual(transport.written, [message]);
         await client.disconnect(true);
     });
-    it('should attempt to connect after 2000ms', async function() {
+    it('should attempt to connect after 2000ms', async function () {
         const timer = sinon.useFakeTimers();
         const fake = sinon.fake();
         const client = new MqttClient({
@@ -55,7 +51,7 @@ describe('MqttClient', function() {
             packetWriter: createMockPacketWriter(fake),
         });
         const connectPromise = client.connect({
-            connectDelay: 2000
+            connectDelay: 2000,
         });
         await timer.tickAsync(1);
         assert.strictEqual(fake.callCount, 1);
@@ -66,12 +62,10 @@ describe('MqttClient', function() {
         await client.disconnect(true);
         await connectPromise.catch(ignoreEverything);
     });
-    it('should send keep alive packets', async function() {
+    it('should send keep alive packets', async function () {
         const fake = sinon.fake();
         const timer = sinon.useFakeTimers();
-        const transport = createMockTransport([
-            Buffer.from('20020100', 'hex')
-        ]);
+        const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
         const client = new MqttClient({
             transport,
             packetWriter: createMockPacketWriter(fake),
@@ -85,11 +79,8 @@ describe('MqttClient', function() {
         assert.strictEqual(fake.lastCall.args[0], PacketType.PingReq);
         await client.disconnect(true);
     });
-    it('should emit the message event on a publish', async function() {
-        const transport = createMockTransport([
-            Buffer.from('20020100', 'hex'),
-            Buffer.from('300400014142', 'hex')
-        ]);
+    it('should emit the message event on a publish', async function () {
+        const transport = createMockTransport([Buffer.from('20020100', 'hex'), Buffer.from('300400014142', 'hex')]);
         const client = new MqttClient({
             transport,
             packetWriter: createMockPacketWriter(() => Buffer.alloc(0)),
@@ -102,34 +93,55 @@ describe('MqttClient', function() {
             payload: Buffer.from('B'),
             qosLevel: 0,
             retained: false,
-            duplicate: false
+            duplicate: false,
         });
         await client.disconnect(true);
     });
-    it('should reconnect', async function() {
-        const fake = sinon.fake();
-        const transport = createMockTransport([
-                Buffer.from('20020100', 'hex')
-            ]);
-        const client = new MqttClient({
-            transport,
-            packetWriter: createMockPacketWriter(fake),
-            autoReconnect: true,
+    describe('reconnecting', function () {
+        it('should reconnect', async function () {
+            const fake = sinon.fake();
+            const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
+            const client = new MqttClient({
+                transport,
+                packetWriter: createMockPacketWriter(fake),
+                autoReconnect: true,
+            });
+            await client.connect();
+            assert.strictEqual(fake.callCount, 1);
+            assert.strictEqual(fake.args[0][0], PacketType.Connect);
+            transport.duplex.destroy();
+            await promisifyEvent(client, 'connect');
+            assert.strictEqual(fake.callCount, 2);
+            assert.strictEqual(fake.args[1][0], PacketType.Connect);
+            await client.disconnect(true);
         });
-        await client.connect();
-        assert.strictEqual(fake.callCount, 1);
-        assert.strictEqual(fake.args[0][0], PacketType.Connect);
-        transport.duplex.destroy();
-        await promisifyEvent(client, 'connect');
-        assert.strictEqual(fake.callCount, 2);
-        assert.strictEqual(fake.args[1][0], PacketType.Connect);
-        await client.disconnect(true);
+        it('should respect maxReconnectAttempts and reconnectUnready', async function () {
+            const fake = sinon.fake();
+            const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
+            const client = new MqttClient({
+                transport,
+                packetWriter: createMockPacketWriter(fake),
+                autoReconnect: {
+                    maxReconnectAttempts: 2,
+                    reconnectUnready: true,
+                },
+            });
+            await client.connect();
+            assert.strictEqual(fake.callCount, 1);
+            transport.duplex.destroy();
+            await promisifyEvent(client, 'connect');
+            assert.strictEqual(fake.callCount, 2);
+            transport.duplex.destroy();
+            await promisifyEvent(client, 'connect');
+            assert.strictEqual(fake.callCount, 3);
+            transport.duplex.destroy();
+            await promisifyEvent(client, 'disconnect');
+            assert.isTrue(client.disconnected);
+        });
     });
-    describe('#stopFlow', function() {
-        it('should stop the correct flow', async function() {
-            const transport = createMockTransport([
-                Buffer.from('20020100', 'hex')
-            ]);
+    describe('#stopFlow', function () {
+        it('should stop the correct flow', async function () {
+            const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
             const client = new MqttClient({
                 transport,
             });
