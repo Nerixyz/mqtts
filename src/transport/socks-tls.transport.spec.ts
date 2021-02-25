@@ -4,7 +4,6 @@
 describe('SocksTlsTransport', function () {
     it('should connect and disconnect', async function () {
         // this proxy doesn't work (TODO: find a better proxy)
-
         /*await assertTransportConnectsAndDisconnects(
             new SocksTlsTransport({
                 host: 'broker.emqx.io',
