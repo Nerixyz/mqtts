@@ -1,6 +1,7 @@
 import { Transport } from './transport';
-import { ConnectionOptions, TLSSocket } from 'tls';
-import { Socket } from 'net';
+import { ConnectionOptions, connect } from 'tls';
+import { Duplex, PassThrough } from 'stream';
+import duplexify = require('duplexify');
 
 export interface TlsTransportOptions {
     host: string;
@@ -9,8 +10,9 @@ export interface TlsTransportOptions {
 }
 export class TlsTransport extends Transport<TlsTransportOptions> {
     // these will be set on the constructor
-    public duplex!: TLSSocket;
-    private underlyingSocket!: Socket;
+    public duplex!: Duplex;
+    private readonly writable = new PassThrough();
+    private readonly readable = new PassThrough();
 
     constructor(options: TlsTransportOptions) {
         super(options);
@@ -18,27 +20,25 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
     }
 
     reset() {
-        this.underlyingSocket = new Socket();
-        this.underlyingSocket.setNoDelay(true);
-        this.duplex = new TLSSocket(this.underlyingSocket);
-        this.duplex.setNoDelay(true);
+        this.duplex = duplexify(this.writable, this.readable, { objectMode: true });
 
         // buffer packets until connect()
         this.duplex.cork();
     }
 
     connect(): Promise<void> {
-        return new Promise(resolve => {
-            this.underlyingSocket.connect(this.options.port, this.options.host);
-            this.duplex.connect(
+        return new Promise(res => {
+            const tlsSocket = connect(
                 {
                     ...this.options.additionalOptions,
                     host: this.options.host,
                     port: this.options.port,
                 },
                 () => {
+                    tlsSocket.pipe(this.readable);
+                    this.writable.pipe(tlsSocket);
                     this.duplex.uncork();
-                    resolve();
+                    res();
                 },
             );
         });
