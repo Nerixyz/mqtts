@@ -60,7 +60,7 @@ export class MqttBaseClient<
     }
 
     private next(newState: StateId) {
-        if (newState > this.current && this.current >= 0) {
+        if (newState > this.current || (this.current === StateId.Fatal && newState === StateId.Disconnected /* reconnect */)) {
             this.sate = newState;
         } else {
             throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);
