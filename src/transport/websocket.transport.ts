@@ -1,7 +1,7 @@
 import { Transport } from './transport';
 import * as WebSocket from 'ws';
 import { ClientOptions } from 'ws';
-import { Duplex, PassThrough } from 'stream';
+import { Duplex } from 'stream';
 import duplexify = require('duplexify');
 import { Duplexify } from 'duplexify';
 
