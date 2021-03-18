@@ -31,7 +31,16 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
         this.socketStream = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
         this.socketStream.pipe(this.readable);
         this.writable.pipe(this.socketStream);
-
-        return new Promise(resolve => this.socket?.on('open', resolve));
+        const socket = this.socket;
+        return new Promise((resolve, reject) => {
+            socket.once('open', () => {
+                resolve();
+                socket.removeAllListeners('error');
+            });
+            socket.once('error', () => {
+                reject();
+                socket.removeAllListeners('open');
+            });
+        });
     }
 }
