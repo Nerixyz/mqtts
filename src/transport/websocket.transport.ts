@@ -30,6 +30,16 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
         this.duplex.setReadable(this.socketStream);
         this.duplex.setWritable(this.socketStream);
 
-        return new Promise(resolve => this.socket?.on('open', resolve));
+        const socket = this.socket;
+        return new Promise((resolve, reject) => {
+            socket.once('open', () => {
+                resolve();
+                socket.removeAllListeners('error');
+            });
+            socket.once('error', () => {
+                reject();
+                socket.removeAllListeners('open');
+            });
+        });
     }
 }
