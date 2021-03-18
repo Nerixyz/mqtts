@@ -433,7 +433,7 @@ export class MqttClient<
             return false;
         if (typeof this.autoReconnect === 'boolean') return !this.disconnected && this.ready && !this.connecting;
 
-        const base = this.autoReconnect.reconnectUnready ? true : !this.disconnected && this.ready && !this.connecting;
+        const base = this.autoReconnect.reconnectUnready || (!this.disconnected && this.ready && !this.connecting);
 
         return base && this.reconnectAttempt <= (this.autoReconnect.maxReconnectAttempts ?? 1);
     }

@@ -1,9 +1,9 @@
 import { Transport } from './transport';
 import { TlsTransportOptions } from './tls.transport';
 import { SocksClient, SocksProxy } from 'socks';
-import { Duplex, PassThrough } from 'stream';
 import duplexify = require('duplexify');
 import { connect } from 'tls';
+import { Duplexify } from 'duplexify';
 
 export interface SocksTlsTransportOptions extends TlsTransportOptions {
     proxyOptions: SocksProxy;
@@ -11,9 +11,7 @@ export interface SocksTlsTransportOptions extends TlsTransportOptions {
 
 export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
     // these will be set on the constructor
-    public duplex!: Duplex;
-    private readonly writable = new PassThrough();
-    private readonly readable = new PassThrough();
+    public duplex!: Duplexify;
 
     constructor(options: SocksTlsTransportOptions) {
         super(options);
@@ -21,10 +19,10 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(this.writable, this.readable, { objectMode: true });
+        this.duplex = duplexify(undefined, undefined, { objectMode: true });
 
         // buffer packets until connect()
-        this.duplex.cork();
+        // this.duplex.cork();
     }
 
     async connect(): Promise<void> {
@@ -45,9 +43,9 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
                     port: this.options.port,
                 },
                 () => {
-                    tlsSocket.pipe(this.readable);
-                    this.writable.pipe(tlsSocket);
-                    this.duplex.uncork();
+                    this.duplex.setWritable(tlsSocket);
+                    this.duplex.setReadable(tlsSocket);
+                    // this.duplex.uncork();
                     res();
                 },
             );

@@ -1,7 +1,7 @@
 import { Transport } from './transport';
 import { ConnectionOptions, connect } from 'tls';
-import { Duplex, PassThrough } from 'stream';
 import duplexify = require('duplexify');
+import { Duplexify } from 'duplexify';
 
 export interface TlsTransportOptions {
     host: string;
@@ -10,9 +10,7 @@ export interface TlsTransportOptions {
 }
 export class TlsTransport extends Transport<TlsTransportOptions> {
     // these will be set on the constructor
-    public duplex!: Duplex;
-    private readonly writable = new PassThrough();
-    private readonly readable = new PassThrough();
+    public duplex!: Duplexify;
 
     constructor(options: TlsTransportOptions) {
         super(options);
@@ -20,10 +18,10 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(this.writable, this.readable, { objectMode: true });
+        this.duplex = duplexify(undefined, undefined, { objectMode: true });
 
         // buffer packets until connect()
-        this.duplex.cork();
+        // this.duplex.cork();
     }
 
     connect(): Promise<void> {
@@ -35,9 +33,9 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
                     port: this.options.port,
                 },
                 () => {
-                    tlsSocket.pipe(this.readable);
-                    this.writable.pipe(tlsSocket);
-                    this.duplex.uncork();
+                    this.duplex.setReadable(tlsSocket);
+                    this.duplex.setWritable(tlsSocket);
+                    // this.duplex.uncork();
                     res();
                 },
             );
