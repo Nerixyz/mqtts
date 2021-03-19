@@ -112,7 +112,7 @@ export class MqttClient<
                     mapping: options.readMap ?? (DefaultPacketReadMap as PacketReadMap<ReadMap>),
                 }));
         this.transformer = this.createTransformer();
-        this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
+        this.transformer.options.debug ??= this.mqttDebug.extend('transformer');
         const packetLogger = this.mqttDebug.extend('write');
         this.writer =
             options.packetWriter ??
@@ -457,7 +457,7 @@ export class MqttClient<
         super.setDisconnected();
         this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
         if (this.transport.active) {
-            await new Promise(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
+            await new Promise<void>(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
             if (this.transport.duplex && !this.transport.duplex.writableEnded) {
                 this.transport.duplex.destroy(new Error('force destroy'));
             }
