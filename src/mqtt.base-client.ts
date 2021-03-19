@@ -5,6 +5,7 @@ import { PacketReadResultMap } from './packets/packet-reader';
 import { PacketWriteOptionsMap } from './packets/packet-writer';
 import { MqttMessage } from './mqtt.message';
 import { EventMapping, PacketType } from './mqtt.constants';
+import { IllegalStateError } from './errors';
 
 export enum StateId {
     Fatal = -1,
@@ -159,7 +160,9 @@ export class MqttBaseClient<
     }
 
     public resolveConnectPromise() {
-        if (!this._connectResolve) throw new Error('No resolver found');
+        if (!this._connectResolve)
+            throw new IllegalStateError('No resolve-function found');
+
         this._connectResolve();
         this._connectPromise = undefined;
         this._connectResolve = undefined;
@@ -167,7 +170,9 @@ export class MqttBaseClient<
     }
 
     public rejectConnectPromise(e: Error) {
-        if (!this._connectReject) throw new Error('No resolver found');
+        if (!this._connectReject)
+            throw new IllegalStateError(`No reject-function found - Error: ${e.message}`);
+
         this._connectReject(e);
         this._connectPromise = undefined;
         this._connectResolve = undefined;
