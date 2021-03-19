@@ -29,7 +29,6 @@
   "dependencies": {
     "@types/ws": "^7.2.5",
     "debug": "^4.1.1",
-    "duplexify": "^4.1.1",
     "eventemitter3": "^4.0.4",
     "socks": "^2.5.0",
     "ts-custom-error": "^3.1.1",
@@ -48,6 +47,7 @@
     "@typescript-eslint/parser": "^3.3.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
+    "duplexify": "^4.1.1",
     "eslint": "^7.2.0",
     "eslint-config-prettier": "^6.11.0",
     "jest": "^26.0.1",
