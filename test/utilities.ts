@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { PacketStream, PacketType, PacketWriteResult, Transport } from '../src';
+import { IllegalStateError, PacketStream, PacketType, PacketWriteResult, Transport } from '../src';
 import { DefaultPacketWriteOptions, PacketWriteOptionsMap, PacketWriter } from '../src/packets/packet-writer';
 import { Duplex, Readable, Writable } from 'stream';
 import duplexify = require('duplexify');
@@ -58,6 +58,11 @@ export function ignoreEverything() {}
 
 export async function assertTransportConnectsAndDisconnects(transport: Transport<unknown>) {
     const writer = new PacketWriter({ logPacketWrite: ignoreEverything });
+
+    await transport.connect();
+    if(!transport.duplex)
+        throw new IllegalStateError('TEST: no duplex');
+
     assert.strictEqual(
         transport.duplex.push(
             writer.write(PacketType.Connect, {
@@ -70,11 +75,11 @@ export async function assertTransportConnectsAndDisconnects(transport: Transport
         ),
         true,
     );
-    await transport.connect();
+
     const firstPacket = await transport.duplex[Symbol.asyncIterator]().next();
     assert.strictEqual(firstPacket.done, false);
     assert(firstPacket.value);
-    await new Promise(resolve => transport.duplex.end(resolve));
+    await new Promise(resolve => transport.duplex?.end(resolve) ?? resolve());
     transport.duplex.destroy();
     assert.strictEqual(transport.duplex.destroyed, true);
     assert.strictEqual(transport.duplex.push('A'), false);
