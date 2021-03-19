@@ -18,6 +18,8 @@ export enum StateId {
 
 export class MqttBaseClient<
     ReadMap extends PacketReadResultMap,
+    // TODO: fix in next major version -- would break existing code
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     WriteMap extends PacketWriteOptionsMap
 > extends EventEmitter<
     {
