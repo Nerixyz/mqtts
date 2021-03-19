@@ -4,3 +4,4 @@ export * from './unexpected-packet.error';
 export * from './connect.error';
 export * from './subscribe.error';
 export * from './flow-stopped.error';
+export * from './illegal-state.error';
