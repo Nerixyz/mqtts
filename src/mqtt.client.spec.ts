@@ -167,7 +167,7 @@ describe('MqttClient', function () {
             });
 
             let resolveListener: undefined | (() => void) = undefined;
-            let listener = new Promise(r => (resolveListener = r));
+            let listener = new Promise<void>(r => (resolveListener = r));
             const fake = sinon.fake(() => resolveListener?.());
 
             client.listen('abc', fake);
@@ -179,7 +179,7 @@ describe('MqttClient', function () {
             assert.strictEqual(fake.args[0][0].topic, 'abc');
 
             resolveListener = undefined;
-            listener = new Promise(r => (resolveListener = r));
+            listener = new Promise<void>(r => (resolveListener = r));
             transport.duplex.destroy();
             await promisifyEvent(client, 'connect');
             await listener;
