@@ -178,4 +178,14 @@ export class MqttBaseClient<
         this._connectResolve = undefined;
         this._connectReject = undefined;
     }
+
+    /**
+     * Only rejects the promise if it's still pending
+     * @param {Error} e
+     */
+    public rejectConnectPromiseIfPending(e: Error) {
+        if(!this._connectReject) return;
+
+        return this.rejectConnectPromise(e);
+    }
 }
