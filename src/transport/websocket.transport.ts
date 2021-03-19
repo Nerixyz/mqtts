@@ -2,8 +2,7 @@ import { Transport } from './transport';
 import * as WebSocket from 'ws';
 import { ClientOptions } from 'ws';
 import { Duplex } from 'stream';
-import duplexify = require('duplexify');
-import { Duplexify } from 'duplexify';
+import { IllegalStateError } from '../errors';
 
 export interface WebsocketTransportOptions {
     url: string;
@@ -11,24 +10,28 @@ export interface WebsocketTransportOptions {
 }
 
 export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
-    // this will be set on the constructor
-    public duplex!: Duplexify;
+    public duplex?: Duplex;
     private socket?: WebSocket;
-    private socketStream?: Duplex;
+
     constructor(options: WebsocketTransportOptions) {
         super(options);
         this.reset();
     }
 
     reset() {
-        this.duplex = duplexify(undefined, undefined, { objectMode: true });
+        if (this.socket) this.socket.close();
+
+        if (this.duplex && !this.duplex.destroyed) this.duplex.destroy();
+
+        this.socket = undefined;
+        this.duplex = undefined;
     }
 
     connect(): Promise<void> {
+        if (this.socket || this.duplex) throw new IllegalStateError('WebSocket still connected.');
+
         this.socket = new WebSocket(this.options.url, this.options.additionalOptions);
-        this.socketStream = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
-        this.duplex.setReadable(this.socketStream);
-        this.duplex.setWritable(this.socketStream);
+        this.duplex = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
 
         const socket = this.socket;
         return new Promise((resolve, reject) => {
