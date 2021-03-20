@@ -40,7 +40,7 @@ import {
     SubscribeReturnCode,
 } from './packets';
 import { MqttMessageOutgoing } from './mqtt.message';
-import { ConnectError, FlowStoppedError, UnexpectedPacketError } from './errors';
+import { ConnectError, FlowStoppedError, IllegalStateError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
 import { EventMapping, PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
@@ -112,7 +112,7 @@ export class MqttClient<
                     mapping: options.readMap ?? (DefaultPacketReadMap as PacketReadMap<ReadMap>),
                 }));
         this.transformer = this.createTransformer();
-        this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
+        this.transformer.options.debug ??= this.mqttDebug.extend('transformer');
         const packetLogger = this.mqttDebug.extend('write');
         this.writer =
             options.packetWriter ??
@@ -129,6 +129,10 @@ export class MqttClient<
         this.mqttDebug('Connecting...');
         this.connectResolver = options;
         this.setConnecting();
+
+        await this.transport.connect();
+        if (!this.transport.duplex) throw new IllegalStateError('Expected transport to expose a Duplex.');
+
         this.pipeline = pipeline(
             this.transport.duplex,
             this.transformer,
@@ -154,7 +158,6 @@ export class MqttClient<
                 if (!this.disconnected) this.setDisconnected('Pipeline finished');
             },
         );
-        await this.transport.connect();
         return this.registerClient(await this.resolveConnectOptions());
     }
 
@@ -340,6 +343,8 @@ export class MqttClient<
     }
 
     protected sendData(data: Buffer): void {
+        if (!this.transport.duplex) throw new IllegalStateError('Expected a duplex - was undefined');
+
         this.transport.duplex.write(data);
     }
 
@@ -412,7 +417,7 @@ export class MqttClient<
 
     protected reset(): void {
         super.reset();
-        if (this.connecting) this.rejectConnectPromise(new Error('Disconnected'));
+        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
         if (this.connectTimer) clearTimeout(this.connectTimer);
         this.connectTimer = undefined;
         if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
@@ -448,12 +453,12 @@ export class MqttClient<
     protected async setDisconnected(reason?: string): Promise<void> {
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
         const willReconnect = this.autoReconnect && this.shouldReconnect();
-        if (this.connecting) this.rejectConnectPromise(new Error('Disconnected'));
+        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
         super.setDisconnected();
         this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
-        if (!this.transport.duplex.destroyed) {
-            await new Promise(resolve => this.transport.duplex.end(resolve));
-            if (!this.transport.duplex.writableEnded) {
+        if (this.transport.active) {
+            await new Promise<void>(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
+            if (this.transport.duplex && !this.transport.duplex.writableEnded) {
                 this.transport.duplex.destroy(new Error('force destroy'));
             }
         }

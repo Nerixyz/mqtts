@@ -14,6 +14,8 @@ export type PacketFlowFunc<
 ) => PacketFlowCallbacks<ReadMap, WriteMap, TPacket>;
 
 export interface PacketFlowCallbacks<
+    // TODO: remove in next major version -- would break existing code
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
     WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
     TPacket = unknown

@@ -1,5 +1,6 @@
 import { Transport } from './transport';
-import { Socket } from 'net';
+import { connect, Socket } from 'net';
+import { IllegalStateError } from '../errors';
 
 export interface TcpTransportOptions {
     host: string;
@@ -7,8 +8,7 @@ export interface TcpTransportOptions {
 }
 
 export class TcpTransport extends Transport<TcpTransportOptions> {
-    // these will be set on the constructor
-    public duplex!: Socket;
+    public duplex?: Socket;
 
     constructor(options: TcpTransportOptions) {
         super(options);
@@ -16,20 +16,19 @@ export class TcpTransport extends Transport<TcpTransportOptions> {
     }
 
     reset() {
-        this.duplex = new Socket();
-        this.duplex.setNoDelay(true);
+        if (this.duplex && !this.duplex.destroyed) this.duplex.destroy();
 
-        // buffer packets
-        this.duplex.cork();
+        this.duplex = undefined;
     }
 
     connect(): Promise<void> {
-        return new Promise(resolve =>
-            this.duplex.connect(this.options.port, this.options.host, () => {
-                // flush
-                this.duplex.uncork();
-                resolve();
-            }),
+        if (this.duplex) throw new IllegalStateError('TcpSocket still connected');
+
+        return new Promise(
+            resolve =>
+                (this.duplex = connect(this.options.port, this.options.host, () => {
+                    resolve();
+                })),
         );
     }
 }

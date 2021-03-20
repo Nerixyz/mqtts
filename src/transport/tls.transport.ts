@@ -1,7 +1,6 @@
 import { Transport } from './transport';
-import { ConnectionOptions, connect } from 'tls';
-import duplexify = require('duplexify');
-import { Duplexify } from 'duplexify';
+import { ConnectionOptions, connect, TLSSocket } from 'tls';
+import { IllegalStateError } from '../errors';
 
 export interface TlsTransportOptions {
     host: string;
@@ -9,8 +8,7 @@ export interface TlsTransportOptions {
     additionalOptions?: ConnectionOptions;
 }
 export class TlsTransport extends Transport<TlsTransportOptions> {
-    // these will be set on the constructor
-    public duplex!: Duplexify;
+    public duplex?: TLSSocket;
 
     constructor(options: TlsTransportOptions) {
         super(options);
@@ -18,24 +16,24 @@ export class TlsTransport extends Transport<TlsTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(undefined, undefined, { objectMode: true });
+        if (this.duplex && !this.duplex.destroyed) this.duplex.destroy();
 
-        // buffer packets until connect()
-        // this.duplex.cork();
+        this.duplex = undefined;
     }
 
     connect(): Promise<void> {
-        return new Promise(res => {
-            const tlsSocket = connect(
+        return new Promise((res, rej) => {
+            if (this.duplex)
+                // this.duplex has to be undefined
+                return rej(new IllegalStateError('TlsTransport still connected - cannot overwrite this.duplex'));
+
+            this.duplex = connect(
                 {
                     ...this.options.additionalOptions,
                     host: this.options.host,
                     port: this.options.port,
                 },
                 () => {
-                    this.duplex.setReadable(tlsSocket);
-                    this.duplex.setWritable(tlsSocket);
-                    // this.duplex.uncork();
                     res();
                 },
             );

@@ -5,6 +5,7 @@ import { PacketReadResultMap } from './packets/packet-reader';
 import { PacketWriteOptionsMap } from './packets/packet-writer';
 import { MqttMessage } from './mqtt.message';
 import { EventMapping, PacketType } from './mqtt.constants';
+import { IllegalStateError } from './errors';
 
 export enum StateId {
     Fatal = -1,
@@ -18,6 +19,8 @@ export enum StateId {
 
 export class MqttBaseClient<
     ReadMap extends PacketReadResultMap,
+    // TODO: fix in next major version -- would break existing code
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     WriteMap extends PacketWriteOptionsMap
 > extends EventEmitter<
     {
@@ -60,7 +63,10 @@ export class MqttBaseClient<
     }
 
     private next(newState: StateId) {
-        if (newState > this.current || (this.current === StateId.Fatal && newState === StateId.Disconnected /* reconnect */)) {
+        if (
+            newState > this.current ||
+            (this.current === StateId.Fatal && newState === StateId.Disconnected) /* reconnect */
+        ) {
             this.sate = newState;
         } else {
             throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);
@@ -154,7 +160,9 @@ export class MqttBaseClient<
     }
 
     public resolveConnectPromise() {
-        if (!this._connectResolve) throw new Error('No resolver found');
+        if (!this._connectResolve)
+            throw new IllegalStateError('No resolve-function found');
+
         this._connectResolve();
         this._connectPromise = undefined;
         this._connectResolve = undefined;
@@ -162,10 +170,22 @@ export class MqttBaseClient<
     }
 
     public rejectConnectPromise(e: Error) {
-        if (!this._connectReject) throw new Error('No resolver found');
+        if (!this._connectReject)
+            throw new IllegalStateError(`No reject-function found - Error: ${e.message}`);
+
         this._connectReject(e);
         this._connectPromise = undefined;
         this._connectResolve = undefined;
         this._connectReject = undefined;
+    }
+
+    /**
+     * Only rejects the promise if it's still pending
+     * @param {Error} e
+     */
+    public rejectConnectPromiseIfPending(e: Error) {
+        if(!this._connectReject) return;
+
+        return this.rejectConnectPromise(e);
     }
 }

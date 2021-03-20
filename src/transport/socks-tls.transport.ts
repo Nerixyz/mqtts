@@ -1,17 +1,16 @@
 import { Transport } from './transport';
 import { TlsTransportOptions } from './tls.transport';
 import { SocksClient, SocksProxy } from 'socks';
-import duplexify = require('duplexify');
 import { connect } from 'tls';
-import { Duplexify } from 'duplexify';
+import { Duplex } from 'stream';
+import { IllegalStateError } from '../errors';
 
 export interface SocksTlsTransportOptions extends TlsTransportOptions {
     proxyOptions: SocksProxy;
 }
 
 export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
-    // these will be set on the constructor
-    public duplex!: Duplexify;
+    public duplex?: Duplex;
 
     constructor(options: SocksTlsTransportOptions) {
         super(options);
@@ -19,13 +18,14 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
     }
 
     reset() {
-        this.duplex = duplexify(undefined, undefined, { objectMode: true });
+        if (this.duplex && !this.duplex.destroyed) this.duplex.destroy();
 
-        // buffer packets until connect()
-        // this.duplex.cork();
+        this.duplex = undefined;
     }
 
     async connect(): Promise<void> {
+        if (this.duplex) throw new IllegalStateError('Still connected.');
+
         const info = await SocksClient.createConnection({
             proxy: this.options.proxyOptions,
             destination: {
@@ -35,7 +35,7 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
             command: 'connect',
         });
         return new Promise(res => {
-            const tlsSocket = connect(
+            this.duplex = connect(
                 {
                     ...this.options.additionalOptions,
                     socket: info.socket,
@@ -43,9 +43,6 @@ export class SocksTlsTransport extends Transport<SocksTlsTransportOptions> {
                     port: this.options.port,
                 },
                 () => {
-                    this.duplex.setWritable(tlsSocket);
-                    this.duplex.setReadable(tlsSocket);
-                    // this.duplex.uncork();
                     res();
                 },
             );
