@@ -136,23 +136,15 @@ export class MqttClient<
         this.pipeline = pipeline(
             this.transport.duplex,
             this.transformer,
-            new Writable({
-                write: (
-                    chunk: MqttParseResult<ReadMap, PacketType>,
-                    encoding: BufferEncoding,
-                    callback: (error?: Error | null) => void,
-                ) => {
+            (async (source: AsyncIterable<MqttParseResult<ReadMap, PacketType>>) => {
+                for await (const chunk of source) {
                     if (!chunk.type) {
-                        callback(new Error('Chunk is not a MqttPacket'));
-                        return;
+                        throw new Error('Chunk is not a MqttPacket');
                     }
-
-                    this.handlePacket(chunk)
-                        .then(() => callback())
-                        .catch(callback);
-                },
-                objectMode: true,
-            }),
+                    await this.handlePacket(chunk)
+                }
+                return 'Source drained';
+            }) as any /* bad definitions */,
             err => {
                 if (err) this.emitError(err);
                 if (!this.disconnected) this.setDisconnected('Pipeline finished');
