@@ -424,12 +424,14 @@ export class MqttClient<
 
     protected reset(): void {
         super.reset();
-        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
-        if (this.connectTimer) clearTimeout(this.connectTimer);
-        this.connectTimer = undefined;
-        if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-        this.keepAliveTimer = undefined;
-        this.activeFlows = [];
+
+        this.stopExecutingFlows(new AbortError('Resetting'));
+
+        if (this.keepAliveTimer) {
+            clearInterval(this.keepAliveTimer);
+            this.keepAliveTimer = undefined;
+        }
+
         this.transformer.reset();
     }
 
@@ -460,7 +462,9 @@ export class MqttClient<
     protected async setDisconnected(reason?: string): Promise<void> {
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
         const willReconnect = this.autoReconnect && this.shouldReconnect();
-        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
+
+        this.stopExecutingFlows(new AbortError('Client disconnected.'));
+
         super.setDisconnected();
         this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
         if (this.transport.active) {
