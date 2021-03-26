@@ -50,9 +50,11 @@ describe('MqttClient', function () {
             transport: createMockTransport(),
             packetWriter: createMockPacketWriter(fake),
         });
-        const connectPromise = client.connect({
-            connectDelay: 2000,
-        }).catch(ignoreEverything);
+        const connectPromise = client
+            .connect({
+                connectDelay: 2000,
+            })
+            .catch(ignoreEverything);
         await timer.tickAsync(1);
         assert.strictEqual(fake.callCount, 1);
         assert.strictEqual(fake.args[0][0], PacketType.Connect);
@@ -204,7 +206,7 @@ describe('MqttClient', function () {
         await client.disconnect(true);
     });
 
-    it('should emit an error if the pipeline fails', async function() {
+    it('should emit an error if the pipeline fails', async function () {
         const errorHandler = sinon.fake();
         const disconnectHandler = sinon.fake();
         const client = new MqttClient({
@@ -222,7 +224,7 @@ describe('MqttClient', function () {
         assert.isTrue(disconnectHandler.calledOnce);
     });
 
-    it('should disconnect if the transport disconnects', async function() {
+    it('should disconnect if the transport disconnects', async function () {
         const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
         const client = new MqttClient({
             transport,

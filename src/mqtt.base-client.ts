@@ -27,7 +27,7 @@ export class MqttBaseClient<
         error: (e: Error) => void;
         warning: (e: Error) => void;
         connect: (packet: ReadMap[PacketType.ConnAck]) => void;
-        disconnect: (event?: {reason?: string; reconnect: boolean}) => void;
+        disconnect: (event?: { reason?: string; reconnect: boolean }) => void;
         message: (message: MqttMessage) => void;
     } & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }
 > {
@@ -54,7 +54,7 @@ export class MqttBaseClient<
 
     protected emitWarning = (e: Error) => this.emit('warning', e);
     protected emitError = (e: Error) => this.emit('error', e);
-    protected emitDisconnect = (event: {reason?: string; reconnect: boolean}) => this.emit('disconnect', event);
+    protected emitDisconnect = (event: { reason?: string; reconnect: boolean }) => this.emit('disconnect', event);
     protected emitConnect = (packet: ReadMap[PacketType.ConnAck]) => this.emit('connect', packet);
     protected emitMessage = (message: MqttMessage) => this.emit('message', message);
 
