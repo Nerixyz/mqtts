@@ -169,7 +169,8 @@ export class MqttClient<
             }) as any /* bad definitions */,
             err => {
                 if (err) this.emitError(err);
-                if (!this.disconnected) this.setDisconnected('Pipeline finished').catch(e => this.emitWarning(e));
+                if (!this.disconnected)
+                    this.setDisconnected(err ?? 'Pipeline finished').catch(e => this.emitWarning(e));
             },
         );
     }
@@ -192,7 +193,9 @@ export class MqttClient<
         this.autoReconnect = false;
         if (!force) {
             return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>).then(
-                async () => await this.setDisconnected(),
+                async () => {
+                    await this.setDisconnected();
+                },
             );
         } else {
             await this.setDisconnected('Forced Disconnect');
@@ -472,9 +475,6 @@ export class MqttClient<
         return await this.connect();
     }
 
-    protected setDisconnected(reason: Error): Promise<Error>;
-    protected setDisconnected(reason: string): Promise<string>;
-    protected setDisconnected(): Promise<undefined>;
     protected async setDisconnected(reason?: string | Error): Promise<undefined | Error | string> {
         const willReconnect = this.shouldReconnect();
         this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}. Reconnect attempt #${this.reconnectAttempt}`);
