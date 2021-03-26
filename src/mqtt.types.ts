@@ -37,7 +37,6 @@ export interface MqttSubscription {
 export type RegisterClientOptions = ConnectRequestOptions;
 
 export type TimerRef = any;
-export type ExecuteNextTick = (action: () => void) => void;
 export type ExecutePeriodically = (timeInMs: number, action: () => void) => TimerRef;
 export type ExecuteDelayed = (timeInMs: number, action: () => void) => TimerRef;
 export type StopExecuting = (ref: any) => void;

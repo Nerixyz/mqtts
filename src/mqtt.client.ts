@@ -1,6 +1,5 @@
 import {
     ExecuteDelayed,
-    ExecuteNextTick,
     ExecutePeriodically,
     IncomingListenMessage,
     ListenOptions,
@@ -56,7 +55,6 @@ export class MqttClient<
     private receiveDebug = this.mqttDebug.extend('packet');
     private pingDebug = this.mqttDebug.extend('ping');
     // wrapper functions
-    protected executeNextTick: ExecuteNextTick = process.nextTick;
     protected executePeriodically: ExecutePeriodically = (ms, cb) => setInterval(cb, ms);
     protected stopExecuting: StopExecuting = clearInterval;
     protected executeDelayed: ExecuteDelayed = (ms, cb) => setTimeout(cb, ms);
