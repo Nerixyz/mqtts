@@ -52,7 +52,7 @@ describe('MqttClient', function () {
         });
         const connectPromise = client.connect({
             connectDelay: 2000,
-        });
+        }).catch(ignoreEverything);
         await timer.tickAsync(1);
         assert.strictEqual(fake.callCount, 1);
         assert.strictEqual(fake.args[0][0], PacketType.Connect);
@@ -60,7 +60,7 @@ describe('MqttClient', function () {
         assert.strictEqual(fake.callCount, 2);
         assert.deepStrictEqual(fake.args[0], fake.args[1]);
         await client.disconnect(true);
-        await connectPromise.catch(ignoreEverything);
+        await connectPromise;
     });
     it('should send keep alive packets', async function () {
         const fake = sinon.fake();
