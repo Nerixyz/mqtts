@@ -155,7 +155,7 @@ export class MqttClient<
             }) as any /* bad definitions */,
             err => {
                 if (err) this.emitError(err);
-                if (!this.disconnected) this.setDisconnected('Pipeline finished');
+                if (!this.disconnected) this.setDisconnected('Pipeline finished').catch(e => this.emitWarning(e));
             },
         );
     }
