@@ -82,7 +82,6 @@ export class MqttClient<
 
     protected writer: PacketWriter<WriteMap>;
 
-    protected connectTimer?: TimerRef;
     protected keepAliveTimer?: TimerRef;
 
     protected autoReconnect?: boolean | MqttAutoReconnectOptions;
@@ -438,7 +437,6 @@ export class MqttClient<
     protected setReady(): void {
         super.setReady();
         this.mqttDebug('Ready!');
-        if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
     protected shouldReconnect(): boolean {
