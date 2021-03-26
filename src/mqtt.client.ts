@@ -263,8 +263,8 @@ export class MqttClient<
 
     /**
      *  Run the accept and next function of all active flows
-     * @param {MqttPacket} packet
-     * @returns {boolean} true if a flow has been found
+     * @param packet
+     * @returns true if a flow has been found
      */
     protected continueFlows(packet: MqttParseResult<ReadMap, typeof PacketType[keyof typeof PacketType]>): boolean {
         let result = false;
