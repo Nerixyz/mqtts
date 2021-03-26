@@ -252,7 +252,7 @@ export class MqttClient<
     }
 
     public stopFlow(flowId: bigint | number, rejection?: Error): boolean {
-        const flow = this.activeFlows.find(f => f.flowId);
+        const flow = this.getFlowById(flowId);
         if (!flow) return false;
 
         this.activeFlows = this.activeFlows.filter(f => f.flowId !== flowId);
@@ -285,6 +285,18 @@ export class MqttClient<
 
     protected clearFinishedFlows(): void {
         this.activeFlows = this.activeFlows.filter(flow => !flow.finished);
+    }
+
+    protected stopExecutingFlows(error: Error) {
+        for(const flow of this.activeFlows) {
+            flow.resolvers.reject(error);
+            flow.finished = true;
+        }
+        this.activeFlows = [];
+    }
+
+    protected getFlowById<T = any>(id: number | bigint): PacketFlowData<T> | undefined {
+        return this.activeFlows.find(f => f.flowId === id);
     }
 
     protected registerClient(
