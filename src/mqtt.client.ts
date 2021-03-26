@@ -131,7 +131,15 @@ export class MqttClient<
         this.setConnecting();
 
         await this.transport.connect();
-        if (!this.transport.duplex) throw new IllegalStateError('Expected transport to expose a Duplex.');
+
+        this.createPipeline();
+
+        return this.registerClient(await this.resolveConnectOptions());
+    }
+
+    protected createPipeline() {
+        if (!this.transport.duplex)
+            throw new IllegalStateError('Expected transport to expose a Duplex.');
 
         this.pipeline = pipeline(
             this.transport.duplex,
@@ -150,7 +158,6 @@ export class MqttClient<
                 if (!this.disconnected) this.setDisconnected('Pipeline finished');
             },
         );
-        return this.registerClient(await this.resolveConnectOptions());
     }
 
     public publish(message: MqttMessageOutgoing): Promise<MqttMessageOutgoing> {
