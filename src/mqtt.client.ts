@@ -459,12 +459,12 @@ export class MqttClient<
 
     protected async setDisconnected(reason?: string): Promise<void> {
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
-        const willReconnect = this.autoReconnect && this.shouldReconnect();
+        const willReconnect = this.shouldReconnect();
 
         this.stopExecutingFlows(new AbortError('Client disconnected.'));
 
         super.setDisconnected();
-        this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
+        this.emitDisconnect({ reason, reconnect: willReconnect });
         if (this.transport.active) {
             await new Promise<void>(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
             if (this.transport.duplex && !this.transport.duplex.writableEnded) {
