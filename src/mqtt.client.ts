@@ -40,7 +40,7 @@ import {
     SubscribeReturnCode,
 } from './packets';
 import { MqttMessageOutgoing } from './mqtt.message';
-import { ConnectError, FlowStoppedError, IllegalStateError, UnexpectedPacketError } from './errors';
+import { AbortError, ConnectError, FlowStoppedError, IllegalStateError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
 import { EventMapping, PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
@@ -82,7 +82,6 @@ export class MqttClient<
 
     protected writer: PacketWriter<WriteMap>;
 
-    protected connectTimer?: TimerRef;
     protected keepAliveTimer?: TimerRef;
 
     protected autoReconnect?: boolean | MqttAutoReconnectOptions;
@@ -131,34 +130,33 @@ export class MqttClient<
         this.setConnecting();
 
         await this.transport.connect();
-        if (!this.transport.duplex) throw new IllegalStateError('Expected transport to expose a Duplex.');
+
+        this.createPipeline();
+
+        return this.registerClient(await this.resolveConnectOptions());
+    }
+
+    protected createPipeline() {
+        if (!this.transport.duplex)
+            throw new IllegalStateError('Expected transport to expose a Duplex.');
 
         this.pipeline = pipeline(
             this.transport.duplex,
             this.transformer,
-            new Writable({
-                write: (
-                    chunk: MqttParseResult<ReadMap, PacketType>,
-                    encoding: BufferEncoding,
-                    callback: (error?: Error | null) => void,
-                ) => {
+            (async (source: AsyncIterable<MqttParseResult<ReadMap, PacketType>>) => {
+                for await (const chunk of source) {
                     if (!chunk.type) {
-                        callback(new Error('Chunk is not a MqttPacket'));
-                        return;
+                        throw new Error('Chunk is not a MqttPacket');
                     }
-
-                    this.handlePacket(chunk)
-                        .then(() => callback())
-                        .catch(callback);
-                },
-                objectMode: true,
-            }),
+                    await this.handlePacket(chunk)
+                }
+                return 'Source drained';
+            }) as any /* bad definitions */,
             err => {
                 if (err) this.emitError(err);
-                if (!this.disconnected) this.setDisconnected('Pipeline finished');
+                if (!this.disconnected) this.setDisconnected('Pipeline finished').catch(e => this.emitWarning(e));
             },
         );
-        return this.registerClient(await this.resolveConnectOptions());
     }
 
     public publish(message: MqttMessageOutgoing): Promise<MqttMessageOutgoing> {
@@ -253,7 +251,7 @@ export class MqttClient<
     }
 
     public stopFlow(flowId: bigint | number, rejection?: Error): boolean {
-        const flow = this.activeFlows.find(f => f.flowId);
+        const flow = this.getFlowById(flowId);
         if (!flow) return false;
 
         this.activeFlows = this.activeFlows.filter(f => f.flowId !== flowId);
@@ -288,36 +286,44 @@ export class MqttClient<
         this.activeFlows = this.activeFlows.filter(flow => !flow.finished);
     }
 
+    protected stopExecutingFlows(error: Error) {
+        for(const flow of this.activeFlows) {
+            flow.resolvers.reject(error);
+            flow.finished = true;
+        }
+        this.activeFlows = [];
+    }
+
+    protected getFlowById<T = any>(id: number | bigint): PacketFlowData<T> | undefined {
+        return this.activeFlows.find(f => f.flowId === id);
+    }
+
     protected registerClient(
         options: RegisterClientOptions,
-        noNewPromise = false,
-        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>,
     ): Promise<any> {
-        let promise;
-        if (noNewPromise) {
-            const flow = this.activeFlows.find(x => x.flowFunc === lastFlow);
-            if (!flow) {
-                promise = Promise.reject(new Error('Could not find flow'));
-            } else {
+        const flow = this.getConnectFlow(options);
+        const connectPromiseFlow = this.startFlow(flow);
+
+        if(typeof options.connectDelay !== 'undefined') {
+            const timerId = this.executeDelayed(options.connectDelay ?? 2000, () => {
+                const flow = this.getFlowById(connectPromiseFlow.flowId);
+                if(!flow) {
+                    // there's no flow anymore
+                    this.stopExecuting(timerId);
+                    return;
+                }
                 const packet = flow.callbacks.start();
                 if (packet) this.sendData(this.writer.write(packet.type, packet.options));
-                promise = Promise.resolve();
-            }
-        } else {
-            promise = this.createConnectPromise();
-            lastFlow = lastFlow ?? this.getConnectFlow(options);
-            this.startFlow(lastFlow)
-                .then(() => this.resolveConnectPromise())
-                .catch(e => this.rejectConnectPromise(e));
+            });
+            connectPromiseFlow.finally(() => this.stopExecuting(timerId))
+                // not sure why this is necessary, but it's there so no unhandledRejection is thrown
+                .catch(() => undefined);
         }
-        this.connectTimer =
-            typeof options.connectDelay === 'undefined'
-                ? undefined
-                : this.executeDelayed(options.connectDelay ?? 2000, () =>
-                      // This Promise will only reject if the flow wasn't found
-                      this.registerClient(options, true, lastFlow).catch(e => this.rejectConnectPromise(e)),
-                  );
-        return promise;
+
+        options.signal?.addEventListener('abort', () =>
+            this.stopFlow(connectPromiseFlow.flowId, new AbortError('Connecting aborted')));
+
+        return connectPromiseFlow;
     }
 
     protected getConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ReadMap, WriteMap, unknown> {
@@ -417,19 +423,20 @@ export class MqttClient<
 
     protected reset(): void {
         super.reset();
-        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
-        if (this.connectTimer) clearTimeout(this.connectTimer);
-        this.connectTimer = undefined;
-        if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-        this.keepAliveTimer = undefined;
-        this.activeFlows = [];
+
+        this.stopExecutingFlows(new AbortError('Resetting'));
+
+        if (this.keepAliveTimer) {
+            clearInterval(this.keepAliveTimer);
+            this.keepAliveTimer = undefined;
+        }
+
         this.transformer.reset();
     }
 
     protected setReady(): void {
         super.setReady();
         this.mqttDebug('Ready!');
-        if (this.connectTimer) this.stopExecuting(this.connectTimer);
     }
 
     protected shouldReconnect(): boolean {
@@ -453,7 +460,9 @@ export class MqttClient<
     protected async setDisconnected(reason?: string): Promise<void> {
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
         const willReconnect = this.autoReconnect && this.shouldReconnect();
-        if (this.connecting) this.rejectConnectPromiseIfPending(new Error('Disconnected'));
+
+        this.stopExecutingFlows(new AbortError('Client disconnected.'));
+
         super.setDisconnected();
         this.emitDisconnect(`reason: ${reason} willReconnect: ${willReconnect}`);
         if (this.transport.active) {

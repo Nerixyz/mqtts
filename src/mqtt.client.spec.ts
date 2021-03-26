@@ -5,7 +5,7 @@ import { assert, use } from 'chai';
 import { RegisterClientOptions } from './mqtt.types';
 import { PacketType } from './mqtt.constants';
 import { RequiredConnectRequestOptions } from './packets';
-import { FlowStoppedError } from './errors';
+import { FlowStoppedError, UnexpectedPacketError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
@@ -52,7 +52,7 @@ describe('MqttClient', function () {
         });
         const connectPromise = client.connect({
             connectDelay: 2000,
-        });
+        }).catch(ignoreEverything);
         await timer.tickAsync(1);
         assert.strictEqual(fake.callCount, 1);
         assert.strictEqual(fake.args[0][0], PacketType.Connect);
@@ -60,7 +60,7 @@ describe('MqttClient', function () {
         assert.strictEqual(fake.callCount, 2);
         assert.deepStrictEqual(fake.args[0], fake.args[1]);
         await client.disconnect(true);
-        await connectPromise.catch(ignoreEverything);
+        await connectPromise;
     });
     it('should send keep alive packets', async function () {
         const fake = sinon.fake();
@@ -202,5 +202,37 @@ describe('MqttClient', function () {
         await promisifyEvent(client, 'PUBLISH');
 
         await client.disconnect(true);
+    });
+
+    it('should emit an error if the pipeline fails', async function() {
+        const errorHandler = sinon.fake();
+        const disconnectHandler = sinon.fake();
+        const client = new MqttClient({
+            transport: createMockTransport([Buffer.from('f0020100', 'hex')]),
+            packetWriter: createMockPacketWriter(() => Buffer.alloc(0)),
+            autoReconnect: false,
+        });
+        client.on('error', errorHandler);
+        client.on('disconnect', disconnectHandler);
+        await assert.isRejected(client.connect());
+        assert.isTrue(client.disconnected);
+        assert.isFalse(client.ready);
+        assert.isTrue(errorHandler.calledOnce);
+        assert.isTrue(errorHandler.args[0][0] instanceof UnexpectedPacketError);
+        assert.isTrue(disconnectHandler.calledOnce);
+    });
+
+    it('should disconnect if the transport disconnects', async function() {
+        const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
+        const client = new MqttClient({
+            transport,
+            packetWriter: createMockPacketWriter(() => Buffer.alloc(0)),
+            autoReconnect: false,
+        });
+        await client.connect();
+        assert.isTrue(client.ready);
+        transport.duplex.destroy();
+        await promisifyEvent(client, 'disconnect');
+        assert.isTrue(client.disconnected);
     });
 });

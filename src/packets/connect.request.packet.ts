@@ -20,6 +20,7 @@ export interface RequiredConnectRequestOptions {
     password?: Buffer | string;
     clean: boolean;
     connectDelay?: number;
+    signal?: AbortSignal;
 }
 
 export function writeConnectPacket(stream: PacketStream, options: RequiredConnectRequestOptions): PacketWriteResult {
