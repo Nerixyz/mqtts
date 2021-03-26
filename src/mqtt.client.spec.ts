@@ -125,7 +125,6 @@ describe('MqttClient', function () {
                 packetWriter: createMockPacketWriter(fake),
                 autoReconnect: {
                     maxReconnectAttempts: 2,
-                    reconnectUnready: true,
                 },
             });
             await client.connect();

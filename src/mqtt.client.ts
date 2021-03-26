@@ -83,7 +83,7 @@ export class MqttClient<
     protected keepAliveTimer?: TimerRef;
 
     protected autoReconnect?: boolean | MqttAutoReconnectOptions;
-    protected reconnectAttempt = 0;
+    protected reconnectAttempt = 1;
 
     protected activeFlows: PacketFlowData<any>[] = [];
 
@@ -121,17 +121,35 @@ export class MqttClient<
             );
     }
 
-    public async connect(options?: Resolvable<RegisterClientOptions>): Promise<any> {
+    private async _connect(options?: Resolvable<RegisterClientOptions>): Promise<any> {
         this.expectCreated();
-        this.mqttDebug('Connecting...');
+        this.mqttDebug(`Connecting using transport "${this.transport.constructor.name}"`);
         this.connectResolver = options;
         this.setConnecting();
-
-        await this.transport.connect();
+        try {
+            await this.transport.connect();
+        } catch (e) {
+            this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
+            if (this.shouldReconnect()) {
+                return this.setDisconnected(e);
+            }
+            await this.setDisconnected(e);
+            throw e;
+        }
 
         this.createPipeline();
 
         return this.registerClient(await this.resolveConnectOptions());
+    }
+
+    public async connect(options?: Resolvable<RegisterClientOptions>) {
+        try {
+            return await this._connect(options);
+        } catch (e) {
+            this.mqttDebug(`Connection error`, e.message);
+            this.emitError(e);
+            return e;
+        }
     }
 
     protected createPipeline() {
@@ -385,7 +403,7 @@ export class MqttClient<
             if (this.connectOptions?.keepAlive) {
                 this.updateKeepAlive(this.connectOptions.keepAlive);
             }
-            if (typeof this.autoReconnect === 'object' && this.autoReconnect.resetOnConnect) this.reconnectAttempt = 0;
+            if (typeof this.autoReconnect === 'object' && this.autoReconnect.resetOnConnect) this.reconnectAttempt = 1;
         } else {
             this.setFatal();
             this.emitError(new ConnectError(connAck.errorName));
@@ -440,27 +458,30 @@ export class MqttClient<
         if (!this.autoReconnect)
             // this should never be true
             return false;
-        if (typeof this.autoReconnect === 'boolean') return !this.disconnected && this.ready && !this.connecting;
+        if (typeof this.autoReconnect === 'boolean') {
+            return this.autoReconnect;
+        }
 
-        const base = this.autoReconnect.reconnectUnready || (!this.disconnected && this.ready && !this.connecting);
-
-        return base && this.reconnectAttempt <= (this.autoReconnect.maxReconnectAttempts ?? 1);
+        return this.reconnectAttempt <= (this.autoReconnect.maxReconnectAttempts ?? 1);
     }
 
     protected async reconnect() {
         this.transport.reset();
         this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
-        await this.connect().catch(e => this.emitError(e));
+        return await this.connect();
     }
 
-    protected async setDisconnected(reason?: string): Promise<void> {
-        this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
+    protected setDisconnected(reason: Error): Promise<Error>;
+    protected setDisconnected(reason: string): Promise<string>;
+    protected setDisconnected(): Promise<undefined>;
+    protected async setDisconnected(reason?: string | Error): Promise<undefined | Error | string> {
         const willReconnect = this.shouldReconnect();
-
+        this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}. Reconnect attempt #${this.reconnectAttempt}`);
+        this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
         this.stopExecutingFlows(new AbortError('Client disconnected.'));
 
-        super.setDisconnected();
+        this._setDisconnected();
         this.emitDisconnect({ reason, reconnect: willReconnect });
         if (this.transport.active) {
             await new Promise<void>(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
@@ -471,7 +492,8 @@ export class MqttClient<
         this.stopExecuting(this.keepAliveTimer);
         this.reset();
         if (willReconnect) {
-            await this.reconnect();
+            return this.reconnect();
         }
+        return reason;
     }
 }

@@ -25,7 +25,6 @@ export type MqttClientConstructorOptions<
 
 export interface MqttAutoReconnectOptions {
     maxReconnectAttempts?: number;
-    reconnectUnready?: boolean;
     resetOnConnect?: boolean;
 }
 

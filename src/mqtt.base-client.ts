@@ -15,16 +15,20 @@ export enum StateId {
 
 // TODO: errors
 
-export class MqttBaseClient<ReadMap extends PacketReadResultMap,
+export class MqttBaseClient<
+    ReadMap extends PacketReadResultMap,
     // TODO: fix in next major version -- would break existing code
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    WriteMap extends PacketWriteOptionsMap> extends EventEmitter<{
-    error: (e: Error) => void;
-    warning: (e: Error) => void;
-    connect: (packet: ReadMap[PacketType.ConnAck]) => void;
-    disconnect: (event?: { reason?: string; reconnect: boolean }) => void;
-    message: (message: MqttMessage) => void;
-} & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }> {
+    WriteMap extends PacketWriteOptionsMap
+> extends EventEmitter<
+    {
+        error: (e: Error) => void;
+        warning: (e: Error) => void;
+        connect: (packet: ReadMap[PacketType.ConnAck]) => void;
+        disconnect: (event?: { reason?: string | Error; reconnect: boolean }) => void;
+        message: (message: MqttMessage) => void;
+    } & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }
+> {
     constructor(private sate: StateId = StateId.Created) {
         super();
     }
@@ -106,7 +110,8 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
 
     protected emitError = (e: Error) => this.emit('error', e);
 
-    protected emitDisconnect = (event: { reason?: string; reconnect: boolean }) => this.emit('disconnect', event);
+    protected emitDisconnect = (event: { reason?: string | Error; reconnect: boolean }) =>
+        this.emit('disconnect', event);
 
     protected emitConnect = (packet: ReadMap[PacketType.ConnAck]) => this.emit('connect', packet);
 
@@ -130,7 +135,7 @@ export class MqttBaseClient<ReadMap extends PacketReadResultMap,
         this.next(StateId.Ready);
     }
 
-    protected setDisconnected(): void {
+    protected _setDisconnected(): void {
         this.next(StateId.Disconnected);
     }
 
