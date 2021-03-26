@@ -1,7 +1,6 @@
 import { RegisterClientOptions, Resolvable } from './mqtt.types';
 import { resolve } from './mqtt.utilities';
-import { PacketReadResultMap } from './packets/packet-reader';
-import { PacketWriteOptionsMap } from './packets/packet-writer';
+import { PacketWriteOptionsMap, PacketReadResultMap } from './packets';
 import { MqttMessage } from './mqtt.message';
 import { EventMapping, PacketType } from './mqtt.constants';
 import EventEmitter = require('eventemitter3');
