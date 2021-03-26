@@ -40,7 +40,7 @@ import {
     SubscribeReturnCode,
 } from './packets';
 import { MqttMessageOutgoing } from './mqtt.message';
-import { ConnectError, FlowStoppedError, IllegalStateError, UnexpectedPacketError } from './errors';
+import { AbortError, ConnectError, FlowStoppedError, IllegalStateError, UnexpectedPacketError } from './errors';
 import { pipeline, Writable } from 'stream';
 import { EventMapping, PacketType, packetTypeToString } from './mqtt.constants';
 import { MqttBaseClient } from './mqtt.base-client';
@@ -301,34 +301,30 @@ export class MqttClient<
 
     protected registerClient(
         options: RegisterClientOptions,
-        noNewPromise = false,
-        lastFlow?: PacketFlowFunc<ReadMap, WriteMap, unknown>,
     ): Promise<any> {
-        let promise;
-        if (noNewPromise) {
-            const flow = this.activeFlows.find(x => x.flowFunc === lastFlow);
-            if (!flow) {
-                promise = Promise.reject(new Error('Could not find flow'));
-            } else {
+        const flow = this.getConnectFlow(options);
+        const connectPromiseFlow = this.startFlow(flow);
+
+        if(typeof options.connectDelay !== 'undefined') {
+            const timerId = this.executeDelayed(options.connectDelay ?? 2000, () => {
+                const flow = this.getFlowById(connectPromiseFlow.flowId);
+                if(!flow) {
+                    // there's no flow anymore
+                    this.stopExecuting(timerId);
+                    return;
+                }
                 const packet = flow.callbacks.start();
                 if (packet) this.sendData(this.writer.write(packet.type, packet.options));
-                promise = Promise.resolve();
-            }
-        } else {
-            promise = this.createConnectPromise();
-            lastFlow = lastFlow ?? this.getConnectFlow(options);
-            this.startFlow(lastFlow)
-                .then(() => this.resolveConnectPromise())
-                .catch(e => this.rejectConnectPromise(e));
+            });
+            connectPromiseFlow.finally(() => this.stopExecuting(timerId))
+                // not sure why this is necessary, but it's there so no unhandledRejection is thrown
+                .catch(() => undefined);
         }
-        this.connectTimer =
-            typeof options.connectDelay === 'undefined'
-                ? undefined
-                : this.executeDelayed(options.connectDelay ?? 2000, () =>
-                      // This Promise will only reject if the flow wasn't found
-                      this.registerClient(options, true, lastFlow).catch(e => this.rejectConnectPromise(e)),
-                  );
-        return promise;
+
+        options.signal?.addEventListener('abort', () =>
+            this.stopFlow(connectPromiseFlow.flowId, new AbortError('Connecting aborted')));
+
+        return connectPromiseFlow;
     }
 
     protected getConnectFlow(options: ConnectRequestOptions): PacketFlowFunc<ReadMap, WriteMap, unknown> {
