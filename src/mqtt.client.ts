@@ -132,13 +132,13 @@ export class MqttClient<
             await this.transport.connect();
         } catch (e) {
             this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
-            // It's needed to return value from successful `.connect()` call
-            // as the client should reconnect afterwards, this method will call `reconnect` which calls `connect`
-            if (this.shouldReconnect()) {
-                return this.setDisconnected(e);
-            }
+            const shouldReconnect = this.shouldReconnect();
             await this.setDisconnected(e);
-            throw e;
+            if (shouldReconnect) {
+                return;
+            } else {
+                throw e;
+            }
         }
 
         this.createPipeline();
@@ -148,12 +148,10 @@ export class MqttClient<
 
     public async connect(options?: Resolvable<RegisterClientOptions>) {
         try {
-            return await this._connect(options);
+            await this._connect(options);
         } catch (e) {
-            const error = e instanceof Error ? e : new Error(e);
-            this.mqttDebug(`Connection error`, error.message);
-            this.emitError(error);
-            return error;
+            this.mqttDebug(`Connection error`, e);
+            this.emitError(e);
         }
     }
 
@@ -174,8 +172,11 @@ export class MqttClient<
             }) as any /* bad definitions */,
             err => {
                 if (err) this.emitError(err);
-                if (!this.disconnected)
-                    this.setDisconnected(err ?? 'Pipeline finished').catch(e => this.emitWarning(e));
+                if (!this.disconnected) {
+                    (err ? this.setDisconnected(err) : this.setDisconnected('Pipeline finished')).catch(e =>
+                        this.emitWarning(e),
+                    );
+                }
             },
         );
     }
@@ -477,12 +478,9 @@ export class MqttClient<
         this.transport.reset();
         this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
-        return await this.connect();
+        await this.connect();
     }
-
-    protected async setDisconnected(
-        reason?: string | Error,
-    ): Promise<undefined | Error | string | ConnectResponsePacket> {
+    protected async setDisconnected(reason?: string | Error) {
         const willReconnect = this.shouldReconnect();
         this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}. Reconnect attempt #${this.reconnectAttempt}`);
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
@@ -499,8 +497,7 @@ export class MqttClient<
         this.stopExecuting(this.keepAliveTimer);
         this.reset();
         if (willReconnect) {
-            return this.reconnect();
+            await this.reconnect();
         }
-        return reason;
     }
 }

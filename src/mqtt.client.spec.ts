@@ -220,10 +220,9 @@ describe('MqttClient', function () {
         });
         client.on('error', errorHandler);
         client.on('disconnect', disconnectHandler);
-        await assert.isRejected(client.connect());
+        await assert.isFulfilled(client.connect());
         assert.isTrue(client.disconnected);
         assert.isFalse(client.ready);
-        assert.isTrue(errorHandler.calledOnce);
         assert.isTrue(errorHandler.args[0][0] instanceof UnexpectedPacketError);
         assert.isTrue(disconnectHandler.calledOnce);
     });
