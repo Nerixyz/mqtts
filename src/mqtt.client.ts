@@ -130,6 +130,8 @@ export class MqttClient<
             await this.transport.connect();
         } catch (e) {
             this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
+            // It's needed to return value from successful `.connect()` call
+            // as the client should reconnect afterwards, this method will call `reconnect` which calls `connect`
             if (this.shouldReconnect()) {
                 return this.setDisconnected(e);
             }
