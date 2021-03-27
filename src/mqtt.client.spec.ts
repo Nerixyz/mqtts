@@ -4,7 +4,12 @@ import sinon = require('sinon');
 import { assert, use } from 'chai';
 import { RegisterClientOptions } from './mqtt.types';
 import { PacketType } from './mqtt.constants';
-import { RequiredConnectRequestOptions } from './packets';
+import {
+    ConnectResponsePacket,
+    PingResponsePacket,
+    PublishRequestPacket,
+    RequiredConnectRequestOptions,
+} from './packets';
 import { FlowStoppedError, UnexpectedPacketError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
@@ -90,7 +95,7 @@ describe('MqttClient', function () {
         await client.connect({
             keepAlive: 60,
         });
-        assert.deepStrictEqual(await promisifyEvent(client, 'message'), {
+        assert.deepStrictEqual(await promisifyEvent<'message', PingResponsePacket>(client, 'message'), {
             topic: 'A',
             payload: Buffer.from('B'),
             qosLevel: 0,
@@ -112,7 +117,7 @@ describe('MqttClient', function () {
             assert.strictEqual(fake.callCount, 1);
             assert.strictEqual(fake.args[0][0], PacketType.Connect);
             transport.duplex.destroy();
-            await promisifyEvent(client, 'connect');
+            await promisifyEvent<'connect', ConnectResponsePacket>(client, 'connect');
             assert.strictEqual(fake.callCount, 2);
             assert.strictEqual(fake.args[1][0], PacketType.Connect);
             await client.disconnect(true);
@@ -130,13 +135,13 @@ describe('MqttClient', function () {
             await client.connect();
             assert.strictEqual(fake.callCount, 1);
             transport.duplex.destroy();
-            await promisifyEvent(client, 'connect');
+            await promisifyEvent<'connect', ConnectResponsePacket>(client, 'connect');
             assert.strictEqual(fake.callCount, 2);
             transport.duplex.destroy();
-            await promisifyEvent(client, 'connect');
+            await promisifyEvent<'connect', ConnectResponsePacket>(client, 'connect');
             assert.strictEqual(fake.callCount, 3);
             transport.duplex.destroy();
-            await promisifyEvent(client, 'disconnect');
+            await promisifyEvent<'disconnect', any>(client, 'disconnect');
             assert.isTrue(client.disconnected);
         });
     });
@@ -182,7 +187,7 @@ describe('MqttClient', function () {
             resolveListener = undefined;
             listener = new Promise<void>(r => (resolveListener = r));
             transport.duplex.destroy();
-            await promisifyEvent(client, 'connect');
+            await promisifyEvent<'connect', ConnectResponsePacket>(client, 'connect');
             await listener;
 
             assert.isTrue(fake.calledTwice);
@@ -199,8 +204,8 @@ describe('MqttClient', function () {
             autoReconnect: true,
         });
 
-        await Promise.all([client.connect(), promisifyEvent(client, 'CONNACK')]);
-        await promisifyEvent(client, 'PUBLISH');
+        await Promise.all([client.connect(), promisifyEvent<'CONNACK', ConnectResponsePacket>(client, 'CONNACK')]);
+        await promisifyEvent<'PUBLISH', PublishRequestPacket>(client, 'PUBLISH');
 
         await client.disconnect(true);
     });
@@ -233,7 +238,7 @@ describe('MqttClient', function () {
         await client.connect();
         assert.isTrue(client.ready);
         transport.duplex.destroy();
-        await promisifyEvent(client, 'disconnect');
+        await promisifyEvent<'disconnect', any>(client, 'disconnect');
         assert.isTrue(client.disconnected);
     });
 });
