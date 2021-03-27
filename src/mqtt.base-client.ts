@@ -6,7 +6,6 @@ import { EventMapping, PacketType } from './mqtt.constants';
 import EventEmitter = require('eventemitter3');
 
 export enum StateId {
-    Fatal = -1,
     Created,
     Connecting,
     Ready,
@@ -39,10 +38,6 @@ export class MqttBaseClient<
 
     get created(): boolean {
         return this.current === StateId.Created;
-    }
-
-    get fatal(): boolean {
-        return this.current === StateId.Fatal;
     }
 
     get ready(): boolean {
@@ -139,15 +134,8 @@ export class MqttBaseClient<
         this.next(StateId.Disconnected);
     }
 
-    protected setFatal(): void {
-        this.next(StateId.Fatal);
-    }
-
     private next(newState: StateId) {
-        if (
-            newState > this.current ||
-            (this.current === StateId.Fatal && newState === StateId.Disconnected) /* reconnect */
-        ) {
+        if (newState > this.current) {
             this.sate = newState;
         } else {
             throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);

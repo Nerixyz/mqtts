@@ -414,9 +414,9 @@ export class MqttClient<
             }
             if (typeof this.autoReconnect === 'object' && this.autoReconnect.resetOnConnect) this.reconnectAttempt = 1;
         } else {
-            this.setFatal();
-            this.emitError(new ConnectError(connAck.errorName));
-            this.setDisconnected(connAck.errorName).catch(e => this.emitWarning(e));
+            const error = new ConnectError(connAck.errorName);
+            this.setDisconnected(error).catch(e => this.emitWarning(e));
+            this.emitError(error);
         }
     }
 
