@@ -121,7 +121,9 @@ export class MqttClient<
             );
     }
 
-    private async _connect(options?: Resolvable<RegisterClientOptions>): Promise<any> {
+    private async _connect(
+        options?: Resolvable<RegisterClientOptions>,
+    ): Promise<undefined | Error | string | ConnectResponsePacket> {
         this.expectCreated();
         this.mqttDebug(`Connecting using transport "${this.transport.constructor.name}"`);
         this.connectResolver = options;
@@ -148,9 +150,10 @@ export class MqttClient<
         try {
             return await this._connect(options);
         } catch (e) {
-            this.mqttDebug(`Connection error`, e.message);
-            this.emitError(e);
-            return e;
+            const error = e instanceof Error ? e : new Error(e);
+            this.mqttDebug(`Connection error`, error.message);
+            this.emitError(error);
+            return error;
         }
     }
 
@@ -477,7 +480,9 @@ export class MqttClient<
         return await this.connect();
     }
 
-    protected async setDisconnected(reason?: string | Error): Promise<undefined | Error | string> {
+    protected async setDisconnected(
+        reason?: string | Error,
+    ): Promise<undefined | Error | string | ConnectResponsePacket> {
         const willReconnect = this.shouldReconnect();
         this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}. Reconnect attempt #${this.reconnectAttempt}`);
         this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
