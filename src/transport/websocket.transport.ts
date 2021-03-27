@@ -32,15 +32,15 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
 
         this.socket = new WebSocket(this.options.url, this.options.additionalOptions);
         this.duplex = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
-
         const socket = this.socket;
+        const duplex = this.duplex;
         return new Promise((resolve, reject) => {
             socket.once('open', () => {
                 resolve();
-                socket.removeAllListeners('error');
+                duplex.removeAllListeners('error');
             });
-            socket.once('error', () => {
-                reject();
+            duplex.once('error', e => {
+                reject(e);
                 socket.removeAllListeners('open');
             });
         });

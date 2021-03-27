@@ -1,11 +1,9 @@
 import { RegisterClientOptions, Resolvable } from './mqtt.types';
 import { resolve } from './mqtt.utilities';
-import EventEmitter = require('eventemitter3');
-import { PacketReadResultMap } from './packets/packet-reader';
-import { PacketWriteOptionsMap } from './packets/packet-writer';
+import { PacketWriteOptionsMap, PacketReadResultMap } from './packets';
 import { MqttMessage } from './mqtt.message';
 import { EventMapping, PacketType } from './mqtt.constants';
-import { IllegalStateError } from './errors';
+import EventEmitter = require('eventemitter3');
 
 export enum StateId {
     Fatal = -1,
@@ -27,50 +25,55 @@ export class MqttBaseClient<
         error: (e: Error) => void;
         warning: (e: Error) => void;
         connect: (packet: ReadMap[PacketType.ConnAck]) => void;
-        disconnect: (reason?: string) => void;
+        disconnect: (event?: { reason?: string | Error; reconnect: boolean }) => void;
         message: (message: MqttMessage) => void;
     } & { [x in keyof EventMapping]: (arg: ReadMap[EventMapping[x]]) => void }
 > {
+    constructor(private sate: StateId = StateId.Created) {
+        super();
+    }
+
     get current(): StateId {
         return this.sate;
     }
+
     get created(): boolean {
         return this.current === StateId.Created;
     }
+
     get fatal(): boolean {
         return this.current === StateId.Fatal;
     }
+
     get ready(): boolean {
         return this.current === StateId.Ready;
     }
+
+    // although it might seem weird, this is intended
+
     get connecting(): boolean {
         return this.current === StateId.Connecting;
     }
-    // although it might seem weird, this is intended
+
     // if the client is just created, it's not connected
     get disconnected(): boolean {
         return this.current === StateId.Disconnected || this.current === StateId.Created;
     }
 
-    protected emitWarning = (e: Error) => this.emit('warning', e);
-    protected emitError = (e: Error) => this.emit('error', e);
-    protected emitDisconnect = (reason?: string) => this.emit('disconnect', reason);
-    protected emitConnect = (packet: ReadMap[PacketType.ConnAck]) => this.emit('connect', packet);
-    protected emitMessage = (message: MqttMessage) => this.emit('message', message);
+    private _connectResolver?: Resolvable<RegisterClientOptions>;
 
-    constructor(private sate: StateId = StateId.Created) {
-        super();
+    set connectResolver(resolver: Resolvable<RegisterClientOptions> | undefined) {
+        this._connectResolver = this._connectResolver ?? resolver;
     }
 
-    private next(newState: StateId) {
-        if (
-            newState > this.current ||
-            (this.current === StateId.Fatal && newState === StateId.Disconnected) /* reconnect */
-        ) {
-            this.sate = newState;
-        } else {
-            throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);
-        }
+    private _connectOptions?: RegisterClientOptions;
+
+    get connectOptions(): RegisterClientOptions | undefined {
+        return this._connectOptions;
+    }
+
+    set connectOptions(options: RegisterClientOptions | undefined) {
+        this._connectOptions = this._connectOptions ?? options;
     }
 
     public expectReady(): void {
@@ -91,6 +94,29 @@ export class MqttBaseClient<
         }
     }
 
+    public hasConnectOptions(): boolean {
+        return !!this._connectOptions;
+    }
+
+    public async resolveConnectOptions(): Promise<RegisterClientOptions> {
+        this._connectOptions = {
+            ...this._connectOptions,
+            ...(this._connectResolver ? await resolve(this._connectResolver) : {}),
+        };
+        return this._connectOptions;
+    }
+
+    protected emitWarning = (e: Error) => this.emit('warning', e);
+
+    protected emitError = (e: Error) => this.emit('error', e);
+
+    protected emitDisconnect = (event: { reason?: string | Error; reconnect: boolean }) =>
+        this.emit('disconnect', event);
+
+    protected emitConnect = (packet: ReadMap[PacketType.ConnAck]) => this.emit('connect', packet);
+
+    protected emitMessage = (message: MqttMessage) => this.emit('message', message);
+
     protected reset(): void {
         if (this.sate === StateId.Created || this.sate === StateId.Disconnected) {
             this.sate = StateId.Created;
@@ -109,7 +135,7 @@ export class MqttBaseClient<
         this.next(StateId.Ready);
     }
 
-    protected setDisconnected(): void {
+    protected _setDisconnected(): void {
         this.next(StateId.Disconnected);
     }
 
@@ -117,29 +143,14 @@ export class MqttBaseClient<
         this.next(StateId.Fatal);
     }
 
-    private _connectResolver?: Resolvable<RegisterClientOptions>;
-    private _connectOptions?: RegisterClientOptions;
-
-    set connectOptions(options: RegisterClientOptions | undefined) {
-        this._connectOptions = this._connectOptions ?? options;
-    }
-    get connectOptions(): RegisterClientOptions | undefined {
-        return this._connectOptions;
-    }
-
-    set connectResolver(resolver: Resolvable<RegisterClientOptions> | undefined) {
-        this._connectResolver = this._connectResolver ?? resolver;
-    }
-
-    public hasConnectOptions(): boolean {
-        return !!this._connectOptions;
-    }
-
-    public async resolveConnectOptions(): Promise<RegisterClientOptions> {
-        this._connectOptions = {
-            ...this._connectOptions,
-            ...(this._connectResolver ? await resolve(this._connectResolver) : {}),
-        };
-        return this._connectOptions;
+    private next(newState: StateId) {
+        if (
+            newState > this.current ||
+            (this.current === StateId.Fatal && newState === StateId.Disconnected) /* reconnect */
+        ) {
+            this.sate = newState;
+        } else {
+            throw new Error(`Invalid state requested (current: ${this.current}, requested: ${newState})`);
+        }
     }
 }

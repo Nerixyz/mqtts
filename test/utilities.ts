@@ -157,7 +157,7 @@ export function createMockPacketWriter<WriteMap extends PacketWriteOptionsMap = 
 }
 
 export function promisifyEvent<EventName, EventArg>(
-    handler: { once(e: EventName, fn: (...args: [EventArg] | [] | [Error] | [(string | undefined)?] | [unknown]) => void): any },
+    handler: { once(e: EventName, fn: (...args: [EventArg]) => void): any },
     key: EventName,
 ): Promise<EventArg> {
     // make the compiler happy. The event names aren't cool Saj
