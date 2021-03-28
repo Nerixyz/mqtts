@@ -20,9 +20,7 @@ export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
     ) {}
     check(reason?: any) {
         if (reason instanceof ConnectError) {
-            if (['NotAuthorized', 'UnacceptableProtocolVersion', 'BadUsernameOrPassword'].includes(reason.status)) {
-                return false;
-            }
+            return ['IdentifierRejected', 'ServerUnavailable'].includes(reason.status);
         }
         if (typeof reason === 'string' && ['Soft disconnect', 'Forced disconnect'].includes(reason)) {
             return false;
