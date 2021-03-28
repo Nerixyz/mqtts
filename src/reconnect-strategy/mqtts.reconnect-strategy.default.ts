@@ -1,6 +1,6 @@
 import { MqttsReconnectStrategy } from './mqtts.reconnect-strategy';
 import { ConnectError } from '../errors';
-import {promisify} from 'util';
+import { promisify } from 'util';
 const sleep = promisify(setTimeout);
 
 export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
@@ -12,7 +12,7 @@ export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
         /**
          * Maximum attempts amount
          */
-        private attempts: number = 60,
+        private maximum: number = 60,
         /**
          * Interval between attempts, milliseconds
          */
@@ -27,7 +27,7 @@ export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
         if (typeof reason === 'string' && ['Soft disconnect', 'Forced disconnect'].includes(reason)) {
             return false;
         }
-        return this.#attempts <= this.attempts;
+        return this.#attempts <= this.maximum;
     }
 
     wait() {
