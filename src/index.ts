@@ -1,6 +1,8 @@
 export * from './errors';
 export * from './flow';
 export * from './packets';
+export * from './reconnect-strategy';
+export * from './transport';
 export * from './mqtt.client';
 export * from './mqtt.constants';
 export * from './mqtt.message';
@@ -9,4 +11,3 @@ export * from './mqtt.parser';
 export * from './mqtt.types';
 export * from './packet-stream';
 export * from './mqtt.utilities';
-export * from './transport';

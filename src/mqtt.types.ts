@@ -11,6 +11,7 @@ import {
     PacketWriter,
 } from './packets/packet-writer';
 import { TransformerFn, ValidatorFn } from './mqtt.listener';
+import { MqttsReconnectStrategy } from './reconnect-strategy/mqtts.reconnect-strategy';
 
 export type MqttClientConstructorOptions<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -20,7 +21,7 @@ export type MqttClientConstructorOptions<
     createTransformer?: () => MqttTransformer<ReadMap>;
     writeMap?: PacketWriteMap<WriteMap>;
     packetWriter?: PacketWriter<WriteMap>;
-    autoReconnect?: boolean | MqttAutoReconnectOptions;
+    autoReconnect?: MqttsReconnectStrategy;
 };
 
 export interface MqttAutoReconnectOptions {

@@ -11,6 +11,7 @@ import {
     RequiredConnectRequestOptions,
 } from './packets';
 import { FlowStoppedError, UnexpectedPacketError } from './errors';
+import { MqttsReconnectStrategyDefault } from './reconnect-strategy';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 use(require('chai-as-promised'));
 
@@ -111,7 +112,7 @@ describe('MqttClient', function () {
             const client = new MqttClient({
                 transport,
                 packetWriter: createMockPacketWriter(fake),
-                autoReconnect: true,
+                autoReconnect: new MqttsReconnectStrategyDefault(1, 0),
             });
             await client.connect();
             assert.strictEqual(fake.callCount, 1);
@@ -128,9 +129,7 @@ describe('MqttClient', function () {
             const client = new MqttClient({
                 transport,
                 packetWriter: createMockPacketWriter(fake),
-                autoReconnect: {
-                    maxReconnectAttempts: 2,
-                },
+                autoReconnect: new MqttsReconnectStrategyDefault(2, 0),
             });
             await client.connect();
             assert.strictEqual(fake.callCount, 1);
@@ -169,7 +168,7 @@ describe('MqttClient', function () {
             ]);
             const client = new MqttClient({
                 transport,
-                autoReconnect: true,
+                autoReconnect: new MqttsReconnectStrategyDefault(1, 0),
             });
 
             let resolveListener: undefined | (() => void) = undefined;
@@ -201,7 +200,7 @@ describe('MqttClient', function () {
         const transport = createMockTransport([Buffer.from('20020100', 'hex'), Buffer.from('30050003616263', 'hex')]);
         const client = new MqttClient({
             transport,
-            autoReconnect: true,
+            autoReconnect: new MqttsReconnectStrategyDefault(1, 0),
         });
 
         await Promise.all([client.connect(), promisifyEvent<'CONNACK', ConnectResponsePacket>(client, 'CONNACK')]);
@@ -216,7 +215,6 @@ describe('MqttClient', function () {
         const client = new MqttClient({
             transport: createMockTransport([Buffer.from('f0020100', 'hex')]),
             packetWriter: createMockPacketWriter(() => Buffer.alloc(0)),
-            autoReconnect: false,
         });
         client.on('error', errorHandler);
         client.on('disconnect', disconnectHandler);
@@ -232,7 +230,6 @@ describe('MqttClient', function () {
         const client = new MqttClient({
             transport,
             packetWriter: createMockPacketWriter(() => Buffer.alloc(0)),
-            autoReconnect: false,
         });
         await client.connect();
         assert.isTrue(client.ready);
