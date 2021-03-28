@@ -82,7 +82,7 @@ export class MqttClient<
 
     protected keepAliveTimer?: TimerRef;
 
-    #reconnect?: MqttsReconnectStrategy;
+    private reconnectStrategy?: MqttsReconnectStrategy;
 
     protected activeFlows: PacketFlowData<any>[] = [];
 
@@ -90,7 +90,7 @@ export class MqttClient<
 
     constructor(options: MqttClientConstructorOptions<ReadMap, WriteMap>) {
         super();
-        this.#reconnect = options.autoReconnect;
+        this.reconnectStrategy = options.autoReconnect;
         this.transport =
             options.transport ??
             new TlsTransport({
@@ -131,7 +131,7 @@ export class MqttClient<
             await this.transport.connect();
         } catch (e) {
             this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
-            const shouldReconnect = this.#reconnect?.check();
+            const shouldReconnect = this.reconnectStrategy?.check();
             await this.setDisconnected(e);
             if (shouldReconnect) {
                 return;
@@ -410,7 +410,7 @@ export class MqttClient<
             if (this.connectOptions?.keepAlive) {
                 this.updateKeepAlive(this.connectOptions.keepAlive);
             }
-            this.#reconnect?.reset();
+            this.reconnectStrategy?.reset();
         } else {
             const error = new ConnectError(connAck.errorName);
             this.setDisconnected(error).catch(e => this.emitWarning(e));
@@ -465,11 +465,11 @@ export class MqttClient<
         this.transport.reset();
         this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
-        await this.#reconnect?.wait();
+        await this.reconnectStrategy?.wait();
         await this.connect();
     }
     protected async setDisconnected(reason?: string | Error) {
-        const willReconnect = this.#reconnect?.check(reason) ?? false;
+        const willReconnect = this.reconnectStrategy?.check(reason) ?? false;
         this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}`);
         this._setDisconnected();
         this.stopExecutingFlows(new AbortError('Client disconnected.'));
