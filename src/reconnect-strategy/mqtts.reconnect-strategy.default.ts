@@ -18,7 +18,7 @@ export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
          */
         private interval: number = 1000,
     ) {}
-    should(reason?: any) {
+    check(reason?: any) {
         if (reason instanceof ConnectError) {
             if (['NotAuthorized', 'UnacceptableProtocolVersion', 'BadUsernameOrPassword'].includes(reason.status)) {
                 return false;

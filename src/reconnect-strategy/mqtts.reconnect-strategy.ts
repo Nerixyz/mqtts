@@ -2,7 +2,7 @@ export interface MqttsReconnectStrategy {
     /**
      * Whether reconnect should happen or not
      */
-    should(reason?: any): boolean;
+    check(reason?: any): boolean;
     /**
      * Reconnect when wait resolves
      */

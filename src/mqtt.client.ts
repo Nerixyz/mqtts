@@ -131,7 +131,7 @@ export class MqttClient<
             await this.transport.connect();
         } catch (e) {
             this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
-            const shouldReconnect = this.#reconnect?.should();
+            const shouldReconnect = this.#reconnect?.check();
             await this.setDisconnected(e);
             if (shouldReconnect) {
                 return;
@@ -469,7 +469,7 @@ export class MqttClient<
         await this.connect();
     }
     protected async setDisconnected(reason?: string | Error) {
-        const willReconnect = this.#reconnect?.should(reason) ?? false;
+        const willReconnect = this.#reconnect?.check(reason) ?? false;
         this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}`);
         this._setDisconnected();
         this.stopExecutingFlows(new AbortError('Client disconnected.'));
