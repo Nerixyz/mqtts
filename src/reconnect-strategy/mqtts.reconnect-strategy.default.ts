@@ -1,5 +1,7 @@
 import { MqttsReconnectStrategy } from './mqtts.reconnect-strategy';
 import { ConnectError } from '../errors';
+import {promisify} from 'util';
+const sleep = promisify(setTimeout);
 
 export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
     /**
@@ -30,7 +32,7 @@ export class MqttsReconnectStrategyDefault implements MqttsReconnectStrategy {
 
     wait() {
         this.#attempts++;
-        return new Promise(resolve => setTimeout(() => resolve(void 0), this.interval));
+        return sleep(this.interval);
     }
     reset() {
         this.#attempts = 1;
