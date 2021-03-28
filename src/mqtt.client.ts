@@ -4,7 +4,6 @@ import {
     IncomingListenMessage,
     ListenOptions,
     ListenSubscribeOptions,
-    MqttAutoReconnectOptions,
     MqttClientConstructorOptions,
     MqttSubscription,
     RegisterClientOptions,
@@ -46,6 +45,7 @@ import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { createDefaultPacketLogger, createFlowCounter, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
 import debug = require('debug');
+import { MqttsReconnectStrategy } from './reconnect-strategy';
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -82,8 +82,7 @@ export class MqttClient<
 
     protected keepAliveTimer?: TimerRef;
 
-    protected autoReconnect?: boolean | MqttAutoReconnectOptions;
-    protected reconnectAttempt = 1;
+    #reconnect?: MqttsReconnectStrategy;
 
     protected activeFlows: PacketFlowData<any>[] = [];
 
@@ -91,7 +90,7 @@ export class MqttClient<
 
     constructor(options: MqttClientConstructorOptions<ReadMap, WriteMap>) {
         super();
-        this.autoReconnect = options.autoReconnect;
+        this.#reconnect = options.autoReconnect;
         this.transport =
             options.transport ??
             new TlsTransport({
@@ -132,7 +131,7 @@ export class MqttClient<
             await this.transport.connect();
         } catch (e) {
             this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
-            const shouldReconnect = this.shouldReconnect();
+            const shouldReconnect = this.#reconnect?.should();
             await this.setDisconnected(e);
             if (shouldReconnect) {
                 return;
@@ -196,15 +195,14 @@ export class MqttClient<
     }
 
     public async disconnect(force = false): Promise<void> {
-        this.autoReconnect = false;
         if (!force) {
             return this.startFlow(outgoingDisconnectFlow() as PacketFlowFunc<ReadMap, WriteMap, void>).then(
                 async () => {
-                    await this.setDisconnected();
+                    await this.setDisconnected('Soft disconnect');
                 },
             );
         } else {
-            await this.setDisconnected('Forced Disconnect');
+            await this.setDisconnected('Forced disconnect');
         }
     }
 
@@ -412,7 +410,7 @@ export class MqttClient<
             if (this.connectOptions?.keepAlive) {
                 this.updateKeepAlive(this.connectOptions.keepAlive);
             }
-            if (typeof this.autoReconnect === 'object' && this.autoReconnect.resetOnConnect) this.reconnectAttempt = 1;
+            this.#reconnect?.reset();
         } else {
             const error = new ConnectError(connAck.errorName);
             this.setDisconnected(error).catch(e => this.emitWarning(e));
@@ -463,30 +461,18 @@ export class MqttClient<
         this.mqttDebug('Ready!');
     }
 
-    protected shouldReconnect(): boolean {
-        if (!this.autoReconnect)
-            // this should never be true
-            return false;
-        if (typeof this.autoReconnect === 'boolean') {
-            return this.autoReconnect;
-        }
-
-        return this.reconnectAttempt <= (this.autoReconnect.maxReconnectAttempts ?? 1);
-    }
-
     protected async reconnect() {
         this.transport.reset();
         this.transformer = this.createTransformer();
         this.transformer.options.debug = this.transformer.options.debug ?? this.mqttDebug.extend('transformer');
+        await this.#reconnect?.wait();
         await this.connect();
     }
     protected async setDisconnected(reason?: string | Error) {
-        const willReconnect = this.shouldReconnect();
-        this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}. Reconnect attempt #${this.reconnectAttempt}`);
-        this.reconnectAttempt++; // this should range from 1 to maxAttempts + 1 when shouldReconnect() is called
-        this.stopExecutingFlows(new AbortError('Client disconnected.'));
-
+        const willReconnect = this.#reconnect?.should(reason) ?? false;
+        this.mqttDebug(`Disconnected. Will reconnect: ${willReconnect}`);
         this._setDisconnected();
+        this.stopExecutingFlows(new AbortError('Client disconnected.'));
         this.emitDisconnect({ reason, reconnect: willReconnect });
         if (this.transport.active) {
             await new Promise<void>(resolve => this.transport.duplex?.end(resolve) ?? /* never */ resolve());
