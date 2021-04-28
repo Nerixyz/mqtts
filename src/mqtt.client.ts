@@ -371,7 +371,10 @@ export class MqttClient<
     }
 
     protected sendData(data: Buffer): void {
-        if (!this.transport.duplex) throw new IllegalStateError('Expected a duplex - was undefined');
+        if (!this.transport.duplex) {
+            this.emitError(new IllegalStateError('Expected a duplex - was undefined'));
+            return;
+        }
 
         this.transport.duplex.write(data);
     }
