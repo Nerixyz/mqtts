@@ -137,8 +137,7 @@ export class MqttClient<
     }
 
     protected createPipeline() {
-        if (!this.transport.duplex)
-            throw new IllegalStateError('Expected transport to expose a Duplex.');
+        if (!this.transport.duplex) throw new IllegalStateError('Expected transport to expose a Duplex.');
 
         this.pipeline = pipeline(
             this.transport.duplex,
@@ -148,7 +147,7 @@ export class MqttClient<
                     if (!chunk.type) {
                         throw new Error('Chunk is not a MqttPacket');
                     }
-                    await this.handlePacket(chunk)
+                    await this.handlePacket(chunk);
                 }
                 return 'Source drained';
             }) as any /* bad definitions */,
@@ -287,7 +286,7 @@ export class MqttClient<
     }
 
     protected stopExecutingFlows(error: Error) {
-        for(const flow of this.activeFlows) {
+        for (const flow of this.activeFlows) {
             flow.resolvers.reject(error);
             flow.finished = true;
         }
@@ -298,16 +297,14 @@ export class MqttClient<
         return this.activeFlows.find(f => f.flowId === id);
     }
 
-    protected registerClient(
-        options: RegisterClientOptions,
-    ): Promise<any> {
+    protected registerClient(options: RegisterClientOptions): Promise<any> {
         const flow = this.getConnectFlow(options);
         const connectPromiseFlow = this.startFlow(flow);
 
-        if(typeof options.connectDelay !== 'undefined') {
+        if (typeof options.connectDelay !== 'undefined') {
             const timerId = this.executeDelayed(options.connectDelay ?? 2000, () => {
                 const flow = this.getFlowById(connectPromiseFlow.flowId);
-                if(!flow) {
+                if (!flow) {
                     // there's no flow anymore
                     this.stopExecuting(timerId);
                     return;
@@ -315,13 +312,15 @@ export class MqttClient<
                 const packet = flow.callbacks.start();
                 if (packet) this.sendData(this.writer.write(packet.type, packet.options));
             });
-            connectPromiseFlow.finally(() => this.stopExecuting(timerId))
+            connectPromiseFlow
+                .finally(() => this.stopExecuting(timerId))
                 // not sure why this is necessary, but it's there so no unhandledRejection is thrown
                 .catch(() => undefined);
         }
 
         options.signal?.addEventListener('abort', () =>
-            this.stopFlow(connectPromiseFlow.flowId, new AbortError('Connecting aborted')));
+            this.stopFlow(connectPromiseFlow.flowId, new AbortError('Connecting aborted')),
+        );
 
         return connectPromiseFlow;
     }
@@ -349,7 +348,10 @@ export class MqttClient<
     }
 
     protected sendData(data: Buffer): void {
-        if (!this.transport.duplex) throw new IllegalStateError('Expected a duplex - was undefined');
+        if (!this.transport.duplex) {
+            this.emitError(new IllegalStateError('Expected a duplex - was undefined'));
+            return;
+        }
 
         this.transport.duplex.write(data);
     }
