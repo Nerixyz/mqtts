@@ -39,7 +39,7 @@ export type RegisterClientOptions = ConnectRequestOptions;
 export type TimerRef = any;
 export type ExecutePeriodically = (timeInMs: number, action: () => void) => TimerRef;
 export type ExecuteDelayed = (timeInMs: number, action: () => void) => TimerRef;
-export type StopExecuting = (ref: any) => void;
+export type StopExecuting = (ref: TimerRef) => void;
 
 export type AsyncLike<TIn, TOut> = (data: TIn) => TOut | PromiseLike<TOut>;
 

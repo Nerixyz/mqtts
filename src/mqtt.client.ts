@@ -56,7 +56,7 @@ export class MqttClient<
     private pingDebug = this.mqttDebug.extend('ping');
     // wrapper functions
     protected executePeriodically: ExecutePeriodically = (ms, cb) => setInterval(cb, ms);
-    protected stopExecuting: StopExecuting = clearInterval;
+    protected stopExecuting: StopExecuting = ref => clearInterval(ref);
     protected executeDelayed: ExecuteDelayed = (ms, cb) => setTimeout(cb, ms);
     protected flowCounter = createFlowCounter();
 
