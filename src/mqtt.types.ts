@@ -21,7 +21,7 @@ export type MqttClientConstructorOptions<
     createTransformer?: () => MqttTransformer<ReadMap>;
     writeMap?: PacketWriteMap<WriteMap>;
     packetWriter?: PacketWriter<WriteMap>;
-    autoReconnect?: MqttsReconnectStrategy;
+    autoReconnect?: MqttsReconnectStrategy | boolean;
 };
 
 export interface MqttAutoReconnectOptions {
