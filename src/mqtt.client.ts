@@ -45,7 +45,7 @@ import { MqttBaseClient } from './mqtt.base-client';
 import { HandlerFn, MqttListener, RemoveHandlerFn } from './mqtt.listener';
 import { createDefaultPacketLogger, createFlowCounter, stringifyObject, toMqttTopicFilter } from './mqtt.utilities';
 import debug = require('debug');
-import { MqttsReconnectStrategy } from './reconnect-strategy';
+import { MqttsReconnectStrategy, MqttsReconnectStrategyDefault } from './reconnect-strategy';
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -90,7 +90,14 @@ export class MqttClient<
 
     constructor(options: MqttClientConstructorOptions<ReadMap, WriteMap>) {
         super();
-        this.reconnectStrategy = options.autoReconnect;
+        if (typeof options.autoReconnect === 'boolean') {
+            this.reconnectStrategy = options.autoReconnect
+                ? new MqttsReconnectStrategyDefault()
+                : new MqttsReconnectStrategyDefault(0);
+        } else {
+            this.reconnectStrategy = options.autoReconnect;
+        }
+
         this.transport =
             options.transport ??
             new TlsTransport({

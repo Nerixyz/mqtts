@@ -3,15 +3,17 @@ import { MqttTransformer } from './mqtt.parser';
 import { Transport } from './transport';
 import { XOR } from 'ts-xor';
 import { MqttMessage } from './mqtt.message';
-import { DefaultPacketReadResultMap, PacketReadMap, PacketReadResultMap } from './packets/packet-reader';
 import {
+    DefaultPacketReadResultMap,
+    PacketReadMap,
+    PacketReadResultMap,
     DefaultPacketWriteOptions,
     PacketWriteMap,
     PacketWriteOptionsMap,
     PacketWriter,
-} from './packets/packet-writer';
+} from './packets';
 import { TransformerFn, ValidatorFn } from './mqtt.listener';
-import { MqttsReconnectStrategy } from './reconnect-strategy/mqtts.reconnect-strategy';
+import { MqttsReconnectStrategy } from './reconnect-strategy';
 
 export type MqttClientConstructorOptions<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
@@ -21,13 +23,8 @@ export type MqttClientConstructorOptions<
     createTransformer?: () => MqttTransformer<ReadMap>;
     writeMap?: PacketWriteMap<WriteMap>;
     packetWriter?: PacketWriter<WriteMap>;
-    autoReconnect?: MqttsReconnectStrategy;
+    autoReconnect?: MqttsReconnectStrategy | boolean;
 };
-
-export interface MqttAutoReconnectOptions {
-    maxReconnectAttempts?: number;
-    resetOnConnect?: boolean;
-}
 
 export interface MqttSubscription {
     topic: string;
