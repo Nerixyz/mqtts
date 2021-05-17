@@ -26,11 +26,6 @@ export type MqttClientConstructorOptions<
     autoReconnect?: MqttsReconnectStrategy | boolean;
 };
 
-export interface MqttAutoReconnectOptions {
-    maxReconnectAttempts?: number;
-    resetOnConnect?: boolean;
-}
-
 export interface MqttSubscription {
     topic: string;
     qosLevel?: number;
