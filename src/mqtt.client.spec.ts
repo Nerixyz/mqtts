@@ -123,6 +123,43 @@ describe('MqttClient', function () {
             assert.strictEqual(fake.args[1][0], PacketType.Connect);
             await client.disconnect(true);
         });
+        it('should reconnect with autoReconnect set to true', async function () {
+            const fake = sinon.fake();
+            const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
+            const client = new MqttClient({
+                transport,
+                packetWriter: createMockPacketWriter(fake),
+                autoReconnect: true,
+            });
+            // this is here, so the strategy doesn't wait
+            (client as any).reconnectStrategy.interval = 0;
+
+            await client.connect();
+            assert.strictEqual(fake.callCount, 1);
+            assert.strictEqual(fake.args[0][0], PacketType.Connect);
+            transport.duplex.destroy();
+            await promisifyEvent<'connect', ConnectResponsePacket>(client, 'connect');
+            assert.strictEqual(fake.callCount, 2);
+            assert.strictEqual(fake.args[1][0], PacketType.Connect);
+            await client.disconnect(true);
+        });
+        it('should not reconnect with autoReconnect set to false', async function () {
+            const fake = sinon.fake();
+            const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
+            const client = new MqttClient({
+                transport,
+                packetWriter: createMockPacketWriter(fake),
+                autoReconnect: false,
+            });
+            await client.connect();
+            assert.strictEqual(fake.callCount, 1);
+            assert.strictEqual(fake.args[0][0], PacketType.Connect);
+            transport.duplex.destroy();
+            assert.strictEqual(fake.callCount, 1);
+            const event = await promisifyEvent<'disconnect', { reconnect: boolean } | undefined>(client, 'disconnect');
+            assert.isFalse(event?.reconnect);
+            assert.strictEqual(client.disconnected, true);
+        });
         it('should respect maxReconnectAttempts and reconnectUnready', async function () {
             const fake = sinon.fake();
             const transport = createMockTransport([Buffer.from('20020100', 'hex')]);
