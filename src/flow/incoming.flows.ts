@@ -5,16 +5,14 @@ import { DefaultPacketReadResultMap } from '../packets/packet-reader';
 import { DefaultPacketWriteOptions, defaultWrite } from '../packets/packet-writer';
 import { PacketType } from '../mqtt.constants';
 
-// PINGREQ is from client to server
-//
-// export function incomingPingFlow(): PacketFlowFunc<DefaultPacketReadResultMap, void> {
-//     return success => ({
-//         start: () => {
-//             success();
-//             return new PingResponsePacket();
-//         },
-//     });
-// }
+export function incomingPingFlow(): PacketFlowFunc<DefaultPacketReadResultMap, DefaultPacketWriteOptions ,void> {
+    return success => ({
+        start: () => {
+            success();
+            return defaultWrite(PacketType.PingResp);
+        },
+    });
+}
 
 export function incomingPublishFlow(
     message: MqttMessage,

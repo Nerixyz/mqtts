@@ -1,9 +1,12 @@
-import { assertPacket } from '../../test/utilities';
+import { assertPacket, assertWritePacket } from '../../test/utilities';
 import { PacketStream } from '../packet-stream';
-import { PingResponsePacket, readPingResponsePacket } from './ping.response.packet';
+import { PingResponsePacket, readPingResponsePacket, writePingResponsePacket } from './ping.response.packet';
 import { assert } from 'chai';
 
 describe('PingResponsePacket', function () {
+    it('should write nothing', function () {
+        assertWritePacket(writePingResponsePacket, {}, {});
+    });
     it('should read', function () {
         assertPacket(readPingResponsePacket(PacketStream.empty(), 0), PingResponsePacket, new PingResponsePacket());
     });
