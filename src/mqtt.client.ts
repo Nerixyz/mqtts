@@ -50,7 +50,7 @@ import { MqttsReconnectStrategy, MqttsReconnectStrategyDefault } from './reconne
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
-    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
+    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
 > extends MqttBaseClient<ReadMap, WriteMap> {
     private mqttDebug = debug('mqtt:client');
     private receiveDebug = this.mqttDebug.extend('packet');
@@ -403,7 +403,7 @@ export class MqttClient<
                 break;
             }
             case PacketType.PingReq: {
-                this.onPingReq()
+                this.onPingReq();
                 break;
             }
             case PacketType.Disconnect: {
@@ -456,10 +456,10 @@ export class MqttClient<
     protected onPingReq() {
         this.startFlow(incomingPingFlow() as PacketFlowFunc<ReadMap, WriteMap, any>)
             .then(() => this.pingDebug(`Server-PingPong @ ${Date.now()}`))
-                .catch(e => {
-                    this.emitWarning(e);
-                    this.pingDebug(`Server-PingPong failed. (${e.message})`);
-                });
+            .catch(e => {
+                this.emitWarning(e);
+                this.pingDebug(`Server-PingPong failed. (${e.message})`);
+            });
     }
 
     protected logReceivedPacket(packet: { type: PacketType; data: any }): void {

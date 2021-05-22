@@ -68,7 +68,7 @@ export const DefaultPacketWriteMap: PacketWriteMap<DefaultPacketWriteOptions> = 
     [PacketType.Subscribe]: writeSubscribePacket,
     [PacketType.Unsubscribe]: writeUnsubscribePacket,
     [PacketType.PingReq]: writePingRequestPacket,
-    [PacketType.PingResp]: writePingResponsePacket
+    [PacketType.PingResp]: writePingResponsePacket,
 };
 
 export type PacketWriteMap<Options extends PacketWriteOptionsMap> = {

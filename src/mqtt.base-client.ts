@@ -18,7 +18,7 @@ export class MqttBaseClient<
     ReadMap extends PacketReadResultMap,
     // TODO: fix in next major version -- would break existing code
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    WriteMap extends PacketWriteOptionsMap
+    WriteMap extends PacketWriteOptionsMap,
 > extends EventEmitter<
     {
         error: (e: Error) => void;

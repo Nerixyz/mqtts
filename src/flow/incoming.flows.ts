@@ -5,7 +5,7 @@ import { DefaultPacketReadResultMap } from '../packets/packet-reader';
 import { DefaultPacketWriteOptions, defaultWrite } from '../packets/packet-writer';
 import { PacketType } from '../mqtt.constants';
 
-export function incomingPingFlow(): PacketFlowFunc<DefaultPacketReadResultMap, DefaultPacketWriteOptions ,void> {
+export function incomingPingFlow(): PacketFlowFunc<DefaultPacketReadResultMap, DefaultPacketWriteOptions, void> {
     return success => ({
         start: () => {
             success();

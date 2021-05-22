@@ -17,7 +17,7 @@ import { MqttsReconnectStrategy } from './reconnect-strategy';
 
 export type MqttClientConstructorOptions<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
-    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
+    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
 > = XOR<{ transport: Transport<unknown> }, { host: string; port: number; enableTrace?: boolean }> & {
     readMap?: PacketReadMap<ReadMap>;
     createTransformer?: () => MqttTransformer<ReadMap>;

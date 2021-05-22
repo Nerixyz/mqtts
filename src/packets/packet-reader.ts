@@ -26,7 +26,7 @@ export interface DefaultPacketReadResultMap extends PacketReadResultMap {
     [PacketType.SubAck]: SubscribeResponsePacket;
     [PacketType.UnsubAck]: UnsubscribeResponsePacket;
     [PacketType.PingResp]: PingResponsePacket;
-    [PacketType.PingReq]: PingRequestPacket
+    [PacketType.PingReq]: PingRequestPacket;
 }
 
 export const DefaultPacketReadMap: PacketReadMap<DefaultPacketReadResultMap> = {
