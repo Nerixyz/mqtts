@@ -1,5 +1,5 @@
 import { MqttMessage } from '../mqtt.message';
-import { incomingPublishFlow } from './incoming.flows';
+import { incomingPublishFlow, incomingPingFlow } from './incoming.flows';
 import { ignoreEverything } from '../../test/utilities';
 import { assert } from 'chai';
 import { PacketType } from '../mqtt.constants';
@@ -60,5 +60,16 @@ describe('incomingPublishFlow', function () {
             });
             assert.strictEqual(fake.calledOnceWithExactly(message), true);
         });
+    });
+});
+
+describe('incomingPingFlow', function () {
+    it('should send a PingResp packet', function () {
+        const fake = sinon.fake();
+        assert.deepStrictEqual(incomingPingFlow()(fake, ignoreEverything).start(), {
+            type: PacketType.PingResp,
+            options: undefined,
+        });
+        assert.strictEqual(fake.callCount, 1);
     });
 });

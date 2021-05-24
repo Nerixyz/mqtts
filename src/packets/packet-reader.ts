@@ -9,6 +9,7 @@ import { PublishCompletePacket, readPublishCompletePacket } from './publish.comp
 import { readSubscribeResponsePacket, SubscribeResponsePacket } from './subscribe.response.packet';
 import { readUnsubscribePacket, UnsubscribeResponsePacket } from './unsubscribe.response.packet';
 import { PingResponsePacket, readPingResponsePacket } from './ping.response.packet';
+import { PingRequestPacket, readPingRequestPacket } from './ping.request.packet';
 
 export type PacketReadResultMap = { [x in PacketType]: unknown };
 export type PacketReadMap<Results extends PacketReadResultMap> = {
@@ -25,6 +26,7 @@ export interface DefaultPacketReadResultMap extends PacketReadResultMap {
     [PacketType.SubAck]: SubscribeResponsePacket;
     [PacketType.UnsubAck]: UnsubscribeResponsePacket;
     [PacketType.PingResp]: PingResponsePacket;
+    [PacketType.PingReq]: PingRequestPacket;
 }
 
 export const DefaultPacketReadMap: PacketReadMap<DefaultPacketReadResultMap> = {
@@ -36,5 +38,6 @@ export const DefaultPacketReadMap: PacketReadMap<DefaultPacketReadResultMap> = {
     [PacketType.PubComp]: readPublishCompletePacket,
     [PacketType.SubAck]: readSubscribeResponsePacket,
     [PacketType.UnsubAck]: readUnsubscribePacket,
+    [PacketType.PingReq]: readPingRequestPacket,
     [PacketType.PingResp]: readPingResponsePacket,
 };

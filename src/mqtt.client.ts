@@ -12,6 +12,7 @@ import {
     TimerRef,
 } from './mqtt.types';
 import {
+    incomingPingFlow,
     incomingPublishFlow,
     outgoingConnectFlow,
     outgoingDisconnectFlow,
@@ -49,7 +50,7 @@ import { MqttsReconnectStrategy, MqttsReconnectStrategyDefault } from './reconne
 
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
-    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions
+    WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
 > extends MqttBaseClient<ReadMap, WriteMap> {
     private mqttDebug = debug('mqtt:client');
     private receiveDebug = this.mqttDebug.extend('packet');
@@ -401,6 +402,10 @@ export class MqttClient<
                 this.onPublish((packet as MqttParseResult<DefaultPacketReadResultMap, PacketType.Publish>).data);
                 break;
             }
+            case PacketType.PingReq: {
+                this.onPingReq();
+                break;
+            }
             case PacketType.Disconnect: {
                 this.setDisconnected('disconnect packet received').catch(e => this.emitWarning(e));
                 break;
@@ -446,6 +451,15 @@ export class MqttClient<
                 await this.messageListener.handleMessage(m);
             })
             .catch(e => this.emitWarning(e));
+    }
+
+    protected onPingReq() {
+        this.startFlow(incomingPingFlow() as PacketFlowFunc<ReadMap, WriteMap, any>)
+            .then(() => this.pingDebug(`Server-PingPong @ ${Date.now()}`))
+            .catch(e => {
+                this.emitWarning(e);
+                this.pingDebug(`Server-PingPong failed. (${e.message})`);
+            });
     }
 
     protected logReceivedPacket(packet: { type: PacketType; data: any }): void {
