@@ -14,7 +14,12 @@ export class PublishRequestPacket extends IdentifierPacket {
         return !!(this.flags & 0b0001);
     }
 
-    constructor(public flags: number, public topic: string, identifier: number | undefined, public payload: Buffer) {
+    constructor(
+        public flags: number,
+        public topic: string,
+        identifier: number | undefined,
+        public payload: Buffer,
+    ) {
         super(identifier ?? -1);
         if ((flags & 0b0110) >> 1 > 2) throw new Error('Invalid QoS');
     }

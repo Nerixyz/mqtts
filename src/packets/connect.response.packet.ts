@@ -11,7 +11,10 @@ export class ConnectResponsePacket {
     get errorName(): keyof typeof ConnectReturnCode | string {
         return Object.entries(ConnectReturnCode).find(([, v]) => v === this.returnCode)?.[0] ?? 'Unknown';
     }
-    constructor(public ackFlags: number, public returnCode: ConnectReturnCode) {}
+    constructor(
+        public ackFlags: number,
+        public returnCode: ConnectReturnCode,
+    ) {}
 }
 
 export function readConnectResponsePacket(stream: PacketStream, remaining: number): ConnectResponsePacket {

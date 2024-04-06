@@ -83,7 +83,7 @@ export class MqttTransformer<ReadMap extends PacketReadResultMap = DefaultPacket
                     callback(
                         new MalformedPacketError(
                             `Error in parser (type: ${packetTypeToString(type)}): ${
-                                e.message || e
+                                e instanceof Error ? e.message : e
                             } - stream: ${stream.data.toString('base64')}`,
                         ),
                     );

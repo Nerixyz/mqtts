@@ -48,6 +48,16 @@ import { createDefaultPacketLogger, createFlowCounter, stringifyObject, toMqttTo
 import debug = require('debug');
 import { MqttsReconnectStrategy, MqttsReconnectStrategyDefault } from './reconnect-strategy';
 
+function tryMakeError(e: unknown): Error {
+    if (e && e instanceof Error) {
+        return e;
+    }
+    if (typeof e === 'string') {
+        return new Error(e);
+    }
+    return new Error(`unknown error (received: ${e})`);
+}
+
 export class MqttClient<
     ReadMap extends PacketReadResultMap = DefaultPacketReadResultMap,
     WriteMap extends PacketWriteOptionsMap = DefaultPacketWriteOptions,
@@ -138,9 +148,10 @@ export class MqttClient<
         try {
             await this.transport.connect();
         } catch (e) {
-            this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, e.message);
+            const err = tryMakeError(e);
+            this.mqttDebug(`Transport connect error ("${this.transport.constructor.name}")`, err.message);
             const shouldReconnect = this.reconnectStrategy?.check();
-            await this.setDisconnected(e);
+            await this.setDisconnected(err);
             if (shouldReconnect) {
                 return;
             } else {
@@ -157,8 +168,9 @@ export class MqttClient<
         try {
             await this._connect(options);
         } catch (e) {
-            this.mqttDebug(`Connection error`, e);
-            this.emitError(e);
+            const err = tryMakeError(e);
+            this.mqttDebug(`Connection error`, err);
+            this.emitError(err);
         }
     }
 
@@ -177,11 +189,11 @@ export class MqttClient<
                 }
                 return 'Source drained';
             }) as any /* bad definitions */,
-            err => {
-                if (err) this.emitError(err);
+            (err: unknown) => {
+                if (err) this.emitError(tryMakeError(err));
                 if (!this.disconnected) {
-                    (err ? this.setDisconnected(err) : this.setDisconnected('Pipeline finished')).catch(e =>
-                        this.emitWarning(e),
+                    (err ? this.setDisconnected(tryMakeError(err)) : this.setDisconnected('Pipeline finished')).catch(
+                        e => this.emitWarning(e),
                     );
                 }
             },
@@ -297,7 +309,7 @@ export class MqttClient<
      * @param packet
      * @returns true if a flow has been found
      */
-    protected continueFlows(packet: MqttParseResult<ReadMap, typeof PacketType[keyof typeof PacketType]>): boolean {
+    protected continueFlows(packet: MqttParseResult<ReadMap, (typeof PacketType)[keyof typeof PacketType]>): boolean {
         let result = false;
         for (const flow of this.activeFlows) {
             if (flow.callbacks.accept?.(packet.data)) {

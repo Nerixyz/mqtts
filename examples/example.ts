@@ -9,9 +9,12 @@ const client = new MqttClient({
 await client.connect();
 
 // subscribe and listen to a topic with params
-await client.listenSubscribe('/mqtts/test/:param', async ({params, payload}: MessageWithParams<{ param: string }>) => {
-    await client.publish({
-        topic: '/mqtts/pong',
-        payload: JSON.stringify({ param: params.param, data: payload.toString() }),
-    });
-});
+await client.listenSubscribe(
+    '/mqtts/test/:param',
+    async ({ params, payload }: MessageWithParams<{ param: string }>) => {
+        await client.publish({
+            topic: '/mqtts/pong',
+            payload: JSON.stringify({ param: params.param, data: payload.toString() }),
+        });
+    },
+);
