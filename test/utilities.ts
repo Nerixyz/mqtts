@@ -60,8 +60,7 @@ export async function assertTransportConnectsAndDisconnects(transport: Transport
     const writer = new PacketWriter({ logPacketWrite: ignoreEverything });
 
     await transport.connect();
-    if(!transport.duplex)
-        throw new IllegalStateError('TEST: no duplex');
+    if (!transport.duplex) throw new IllegalStateError('TEST: no duplex');
 
     assert.strictEqual(
         transport.duplex.push(

@@ -1,12 +1,12 @@
 import { Transport } from './transport';
-import * as WebSocket from 'ws';
-import { ClientOptions } from 'ws';
+import { WebSocket, ClientOptions, createWebSocketStream } from 'ws';
 import { Duplex } from 'stream';
 import { IllegalStateError } from '../errors';
 
 export interface WebsocketTransportOptions {
     url: string;
     additionalOptions?: ClientOptions;
+    protocols?: string | string[];
 }
 
 export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
@@ -30,8 +30,8 @@ export class WebsocketTransport extends Transport<WebsocketTransportOptions> {
     connect(): Promise<void> {
         if (this.socket || this.duplex) throw new IllegalStateError('WebSocket still connected.');
 
-        this.socket = new WebSocket(this.options.url, this.options.additionalOptions);
-        this.duplex = WebSocket.createWebSocketStream(this.socket, { objectMode: true });
+        this.socket = new WebSocket(this.options.url, this.options.protocols, this.options.additionalOptions);
+        this.duplex = createWebSocketStream(this.socket, { objectMode: true });
         const socket = this.socket;
         const duplex = this.duplex;
         return new Promise((resolve, reject) => {

@@ -5,6 +5,10 @@ import { assert } from 'chai';
 import { ignoreEverything } from '../test/utilities';
 
 describe('MqttListener', function () {
+    afterEach(() => {
+        sinon.restore();
+    });
+
     it('should handles messages correctly', async function () {
         const listener = new MqttListener();
         const fake = sinon.fake();

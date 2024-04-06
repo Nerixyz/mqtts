@@ -7,7 +7,10 @@ export class SubscribeResponsePacket extends IdentifierPacket {
         return !this.returnCodes.every(x => x !== SubscribeReturnCode.Fail);
     }
 
-    constructor(identifier: number, public returnCodes: SubscribeReturnCode[]) {
+    constructor(
+        identifier: number,
+        public returnCodes: SubscribeReturnCode[],
+    ) {
         super(identifier);
     }
 }
