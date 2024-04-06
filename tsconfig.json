@@ -3,6 +3,7 @@
         "experimentalDecorators": true,
         "module": "commonjs",
         "target": "es2019",
+        "moduleResolution": "node",
         "sourceMap": true,
         "outDir": "dist",
         "rootDir": "./",

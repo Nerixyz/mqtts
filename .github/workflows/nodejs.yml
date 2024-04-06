@@ -10,18 +10,25 @@ jobs:
 
         strategy:
             matrix:
-                node-version: [14.x]
+                node-version: [18.x]
 
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v1
+              uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-            - run: npm install
-            - run: npm run build
-            - run: npm run typecheck
-            - run: npm run lint
-            - run: npm test
+            - uses: pnpm/action-setup@v3.0.0
+              name: Install pnpm
+              id: pnpm-install
+              with:
+                  version: latest
+                  run_install: true
+            - run: |
+                  pnpm build
+                  pnpm typecheck
+                  pnpm lint
+                  pnpm test
+                  pnpm check-format
               env:
                   CI: true

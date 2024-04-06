@@ -25,6 +25,10 @@ import { Buffer } from 'buffer';
 import sinon = require('sinon');
 
 describe('outgoingConnectFlow', function () {
+    afterEach(() => {
+        sinon.restore();
+    });
+
     it('should send a connect packet', function () {
         const fake = sinon.fake();
         const options: RequiredConnectRequestOptions = {

@@ -3,7 +3,7 @@ import { resolve } from './mqtt.utilities';
 import { PacketWriteOptionsMap, PacketReadResultMap } from './packets';
 import { MqttMessage } from './mqtt.message';
 import { EventMapping, PacketType } from './mqtt.constants';
-import EventEmitter from 'eventemitter3';
+import { EventEmitter } from 'eventemitter3';
 
 export enum StateId {
     Created,

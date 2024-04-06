@@ -7,6 +7,10 @@ import { PublishReleasePacket } from '../packets';
 import sinon = require('sinon');
 
 describe('incomingPublishFlow', function () {
+    afterEach(() => {
+        sinon.restore();
+    });
+
     describe('QoS 0', function () {
         it('should succeed immediately', function () {
             const fake = sinon.fake();

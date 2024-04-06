@@ -16,6 +16,10 @@ import { MqttsReconnectStrategyDefault } from './reconnect-strategy';
 use(require('chai-as-promised'));
 
 describe('MqttClient', function () {
+    afterEach(() => {
+        sinon.restore();
+    });
+
     it('should connect', async function () {
         const fake = sinon.fake();
         const client = new MqttClient({
